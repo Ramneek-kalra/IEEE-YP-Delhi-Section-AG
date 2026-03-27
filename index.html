@@ -97,7 +97,12 @@ Best regards,
 {organizer}</textarea>
         </div>
        </div>
-       <div class="mt-4"><label for="email-select" class="block text-xs text-[#7a7d8e] mb-1">Send to</label> <select id="email-select" class="w-full bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-4 py-2.5 text-sm text-[#e2e4e9] outline-none focus:border-[#6c5ce7]"> <option value="all">All Participants</option> </select> <button onclick="generateEmails()" class="mt-3 bg-[#6c5ce7] hover:bg-[#5a4bd6] text-white px-5 py-2.5 rounded-lg text-sm font-semibold w-full flex items-center justify-center gap-2 transition"> <i data-lucide="mail" class="w-4 h-4"></i> Generate mailto Links </button>
+       <div class="mt-4"><label for="email-select" class="block text-xs text-[#7a7d8e] mb-1">Send to</label> <select id="email-select" class="w-full bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-4 py-2.5 text-sm text-[#e2e4e9] outline-none focus:border-[#6c5ce7]"> <option value="all">All Participants</option> </select>
+        <div class="mt-3 p-3 bg-[#1e2030] rounded-lg text-xs text-[#7a7d8e]">
+         <p class="mb-2 font-semibold text-[#e2e4e9]">📧 Email Options:</p>
+         <button onclick="generateEmailsWithQR()" class="w-full bg-[#6c5ce7] hover:bg-[#5a4bd6] text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition mb-2"> <i data-lucide="mail" class="w-4 h-4"></i> Download as HTML </button>
+         <button onclick="generateEmails()" class="w-full bg-[#7a7d8e] hover:bg-[#888] text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition"> <i data-lucide="share-2" class="w-4 h-4"></i> Generate mailto Links </button>
+        </div>
        </div>
        <div id="email-links" class="mt-4 space-y-2 max-h-60 overflow-auto"></div>
       </div><!-- Preview -->
@@ -491,7 +496,7 @@ async function confirmImport() {
   if (csvInput) csvInput.value = '';
 }
 
-// Email
+// Email - Fixed to prevent duplicate QR codes
 function updateEmailSelect() {
   const sel = document.getElementById('email-select');
   if (!sel) return;
@@ -525,28 +530,113 @@ function previewEmail(p) {
   const subject = subjectEl.value;
   const bodyTemplate = bodyEl.value;
   
-  const body = bodyTemplate
+  // Replace placeholders EXCEPT [QR CODE]
+  let body = bodyTemplate
     .replace(/\{name\}/g, p.name)
     .replace(/\{event\}/g, cfg.event_name || defaultConfig.event_name)
     .replace(/\{date\}/g, cfg.event_date || defaultConfig.event_date)
     .replace(/\{organizer\}/g, cfg.organizer_name || defaultConfig.organizer_name);
 
   const qrImg = generateQRDataURL(p.qr_data);
-  const qrPlaceholder = `[QR CODE]`;
   
+  // Only replace the FIRST occurrence of [QR CODE]
   const qrHtml = qrImg 
     ? `<div style="text-align:center;margin:16px 0;"><img src="${qrImg}" style="width:160px;height:160px;border-radius:8px;border:1px solid #ddd;" alt="QR Code"><p style="font-size:10px;color:#999;margin-top:4px;font-family:monospace;word-break:break-all;">${escapeHtml(p.qr_data)}</p></div>`
     : `<div style="text-align:center;margin:16px 0;background:#f0f0f0;padding:20px;border-radius:8px;"><p style="color:#999;">QR Code</p></div>`;
+
+  body = body.replace('[QR CODE]', qrHtml);
 
   previewEl.innerHTML = `
     <div style="font-family: 'DM Sans', sans-serif;">
       <p style="font-size:12px;color:#999;margin-bottom:8px;"><strong>To:</strong> ${escapeHtml(p.email)}</p>
       <p style="font-size:14px;font-weight:700;margin-bottom:16px;color:#222;">${escapeHtml(subject)}</p>
-      <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;color:#444;">${escapeHtml(body).replace(new RegExp(escapeHtml(qrPlaceholder), 'g'), () => qrHtml)}</div>
+      <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;color:#444;"><pre style="font-family:inherit;white-space:pre-wrap;margin:0;">${escapeHtml(body).replace(/\n/g, '<br>')}</pre>${qrHtml}</div>
     </div>
   `;
 }
 
+// Generate HTML emails for download
+function generateEmailsWithQR() {
+  const cfg = (typeof window !== 'undefined' && window.elementSdk && window.elementSdk.config) ? window.elementSdk.config : defaultConfig;
+  const sel = document.getElementById('email-select');
+  const subjectEl = document.getElementById('email-subject');
+  const bodyEl = document.getElementById('email-body');
+  
+  if (!sel || !subjectEl || !bodyEl) return;
+  
+  const subject = subjectEl.value;
+  const bodyTemplate = bodyEl.value;
+  const targets = sel.value === 'all' ? participants : participants.filter(p => p.id === sel.value);
+
+  if (targets.length === 0) { 
+    showToast('No participants to email', 'error'); 
+    return; 
+  }
+
+  let htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Event Emails</title>
+  <style>
+    body { font-family: 'DM Sans', sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
+    .email-container { margin: 20px; padding: 20px; background: white; border-radius: 8px; page-break-after: always; }
+    .email-header { border-bottom: 2px solid #6c5ce7; padding-bottom: 10px; margin-bottom: 15px; }
+    .email-to { font-size: 12px; color: #999; font-weight: bold; }
+    .email-subject { font-size: 16px; font-weight: bold; color: #222; margin: 10px 0; }
+    .email-body { font-size: 13px; color: #444; line-height: 1.6; white-space: pre-wrap; }
+    .qr-section { text-align: center; margin: 20px 0; }
+    .qr-code { width: 160px; height: 160px; border-radius: 8px; border: 1px solid #ddd; }
+    .qr-token { font-size: 10px; color: #999; font-family: monospace; word-break: break-all; margin-top: 10px; }
+    hr { border: none; border-top: 1px solid #ddd; margin: 30px 0; }
+  </style>
+</head>
+<body>`;
+
+  targets.forEach((p, idx) => {
+    const body = bodyTemplate
+      .replace(/\{name\}/g, p.name)
+      .replace(/\{event\}/g, cfg.event_name || defaultConfig.event_name)
+      .replace(/\{date\}/g, cfg.event_date || defaultConfig.event_date)
+      .replace(/\{organizer\}/g, cfg.organizer_name || defaultConfig.organizer_name);
+
+    const qrImg = generateQRDataURL(p.qr_data);
+    
+    htmlContent += `
+  <div class="email-container">
+    <div class="email-header">
+      <div class="email-to">To: ${escapeHtml(p.email)}</div>
+      <div class="email-subject">${escapeHtml(subject)}</div>
+    </div>
+    <div class="email-body">${escapeHtml(body).replace(/\n/g, '<br>')}</div>
+    <div class="qr-section">
+      <img src="${qrImg}" alt="QR Code" class="qr-code">
+      <div class="qr-token">${escapeHtml(p.qr_data)}</div>
+    </div>
+  </div>`;
+
+    if (idx < targets.length - 1) htmlContent += '<hr>';
+  });
+
+  htmlContent += `
+</body>
+</html>`;
+
+  // Download as HTML file
+  const blob = new Blob([htmlContent], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `event-emails-${new Date().toISOString().split('T')[0]}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  showToast(`${targets.length} email(s) downloaded as HTML!`);
+}
+
+// Generate mailto links (without embedded images - limitation)
 function generateEmails() {
   const cfg = (typeof window !== 'undefined' && window.elementSdk && window.elementSdk.config) ? window.elementSdk.config : defaultConfig;
   const sel = document.getElementById('email-select');
@@ -573,7 +663,9 @@ function generateEmails() {
       .replace(/\{date\}/g, cfg.event_date || defaultConfig.event_date)
       .replace(/\{organizer\}/g, cfg.organizer_name || defaultConfig.organizer_name)
       .replace('[QR CODE]', `[QR Code: ${p.qr_data}]`);
+    
     const mailto = `mailto:${encodeURIComponent(p.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    
     linksDiv.innerHTML += `
       <a href="${mailto}" target="_blank" rel="noopener noreferrer" class="block bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-4 py-2.5 text-sm hover:border-[#6c5ce7] transition flex items-center justify-between">
         <span class="truncate">${escapeHtml(p.name)} — ${escapeHtml(p.email)}</span>
