@@ -23,7 +23,7 @@
 @keyframes scanMove { 0%,100% { top: 10%; } 50% { top: 85%; } }
 .pulse-ring { animation: pulseRing 1.5s ease infinite; }
 @keyframes pulseRing { 0% { transform: scale(0.8); opacity:1; } 100% { transform: scale(1.6); opacity:0; } }
-</style>
+  </style>
   <style>body { box-sizing: border-box; }</style>
  </head>
  <body class="h-full bg-[#0f1117] text-[#e2e4e9] overflow-auto">
@@ -35,7 +35,7 @@
      </div>
      <div>
       <h1 id="header-title" class="text-lg font-bold text-[#e2e4e9]">Event Check-In Manager</h1>
-      <p id="header-date" class="text-xs text-[#7a7d8e]">Manage participants &amp; verify attendance</p>
+      <p id="header-date" class="text-xs text-[#7a7d8e]">Manage participants & verify attendance</p>
      </div>
     </div>
     <div id="stats-bar" class="flex gap-4 text-xs"><span class="bg-[#1e2030] px-3 py-1.5 rounded-full"><span id="stat-total" class="text-[#6c5ce7] font-bold">0</span> Registered</span> <span class="bg-[#1e2030] px-3 py-1.5 rounded-full"><span id="stat-checked" class="text-[#00b894] font-bold">0</span> Checked In</span>
@@ -90,7 +90,7 @@ We're excited to confirm your registration for {event} on {date}!
 
 Please find your personal QR code below. Present this at the entrance for quick check-in.
 
-[QR CODE WILL BE ATTACHED]
+[QR CODE]
 
 See you there!
 Best regards,
@@ -103,22 +103,63 @@ Best regards,
       </div><!-- Preview -->
       <div>
        <h2 class="text-sm font-semibold mb-3 flex items-center gap-2"><i data-lucide="eye" class="w-4 h-4 text-[#6c5ce7]"></i> Email Preview</h2>
-       <div class="bg-white rounded-xl p-6 text-[#333] text-sm" id="email-preview">
+       <div class="bg-white rounded-xl p-6 text-[#333] text-sm overflow-auto" id="email-preview" style="max-height: 600px;">
         <p class="text-[#999] italic text-center py-8">Select a participant to preview their email with QR code.</p>
        </div>
       </div>
      </div>
     </div><!-- SCANNER TAB -->
     <div id="panel-scanner" class="p-6 hidden">
-     <div class="max-w-lg mx-auto text-center">
-      <div class="bg-[#161922] rounded-xl border border-[#2a2d3a] p-8">
-       <div class="w-16 h-16 rounded-full bg-[#1e2030] flex items-center justify-center mx-auto mb-4 relative"><i data-lucide="scan" class="w-8 h-8 text-[#6c5ce7]"></i>
-        <div class="absolute inset-0 rounded-full border-2 border-[#6c5ce7] pulse-ring"></div>
+     <div class="max-w-lg mx-auto">
+      <!-- Manual Input View -->
+      <div id="manual-view" class="bg-[#161922] rounded-xl border border-[#2a2d3a] p-8">
+       <div class="text-center mb-6">
+        <div class="w-16 h-16 rounded-full bg-[#1e2030] flex items-center justify-center mx-auto mb-4 relative"><i data-lucide="scan" class="w-8 h-8 text-[#6c5ce7]"></i>
+         <div class="absolute inset-0 rounded-full border-2 border-[#6c5ce7] pulse-ring"></div>
+        </div>
+        <h2 class="text-lg font-bold mb-2">QR Code Verifier</h2>
+        <p class="text-sm text-[#7a7d8e] mb-6">Use camera or paste QR code data to verify participants.</p>
        </div>
-       <h2 class="text-lg font-bold mb-2">QR Code Verifier</h2>
-       <p class="text-sm text-[#7a7d8e] mb-6">Paste or type the QR code data to verify a participant.</p><label for="scan-input" class="sr-only">QR Code Data</label> <input id="scan-input" placeholder="Paste QR code data here..." class="w-full bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-4 py-3 text-sm text-[#e2e4e9] outline-none focus:border-[#6c5ce7] text-center mb-4"> <button onclick="verifyQR()" id="verify-btn" class="bg-[#6c5ce7] hover:bg-[#5a4bd6] text-white px-6 py-3 rounded-lg text-sm font-semibold w-full flex items-center justify-center gap-2 transition"> <i data-lucide="shield-check" class="w-4 h-4"></i> Verify Participant </button>
+       <div class="space-y-3">
+        <button onclick="startCamera()" id="camera-btn" class="w-full bg-[#6c5ce7] hover:bg-[#5a4bd6] text-white px-6 py-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition">
+         <i data-lucide="camera" class="w-4 h-4"></i> Start Camera Scan
+        </button>
+        <div class="relative">
+         <div class="absolute inset-0 flex items-center">
+          <div class="w-full border-t border-[#2a2d3a]"></div>
+         </div>
+         <div class="relative flex justify-center text-xs">
+          <span class="px-2 bg-[#161922] text-[#7a7d8e]">or</span>
+         </div>
+        </div>
+        <div>
+         <label for="scan-input" class="sr-only">QR Code Data</label>
+         <input id="scan-input" placeholder="Paste QR code data here..." class="w-full bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-4 py-3 text-sm text-[#e2e4e9] outline-none focus:border-[#6c5ce7] text-center mb-3">
+         <button onclick="verifyQR()" id="verify-btn" class="bg-[#6c5ce7] hover:bg-[#5a4bd6] text-white px-6 py-3 rounded-lg text-sm font-semibold w-full flex items-center justify-center gap-2 transition">
+          <i data-lucide="shield-check" class="w-4 h-4"></i> Verify Participant
+         </button>
+        </div>
+       </div>
        <div id="scan-result" class="mt-6 hidden"></div>
-      </div><!-- Recent verifications -->
+      </div>
+
+      <!-- Camera View -->
+      <div id="camera-view" class="hidden">
+       <div class="bg-[#161922] rounded-xl border border-[#2a2d3a] overflow-hidden">
+        <div class="relative bg-black aspect-video">
+         <video id="camera-stream" class="w-full h-full object-cover" playsinline autoplay muted></video>
+         <div class="absolute inset-0 border-4 border-[#6c5ce7] opacity-30" style="clip-path: polygon(10% 0%, 0% 0%, 0% 10%, 0% 90%, 0% 100%, 10% 100%, 90% 100%, 100% 100%, 100% 90%, 100% 10%, 100% 0%, 90% 0%);"></div>
+         <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-[#6c5ce7]" style="border-radius: 12px;"></div>
+        </div>
+        <div class="p-4 flex gap-2 justify-center">
+         <button onclick="stopCamera()" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition">
+          <i data-lucide="x" class="w-4 h-4"></i> Close Camera
+         </button>
+        </div>
+       </div>
+      </div>
+
+      <!-- Recent verifications -->
       <div class="mt-6 bg-[#161922] rounded-xl border border-[#2a2d3a] p-5 text-left">
        <h3 class="text-sm font-semibold mb-3">Recent Verifications</h3>
        <div id="verify-log" class="space-y-2 max-h-60 overflow-auto">
@@ -129,8 +170,9 @@ Best regards,
     </div>
    </main>
   </div>
+
   <script>
-// State - using browser localStorage instead of Data SDK
+// State - using browser localStorage
 let participants = [];
 let csvParsed = [];
 let verifyHistory = [];
@@ -157,8 +199,7 @@ function loadFromCache() {
     participants = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     verifyHistory = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
     renderParticipants();
-    const logDiv = document.getElementById('verify-log');
-    if (logDiv) updateVerifyLog();
+    updateVerifyLog();
   } catch (e) {
     console.error('Failed to load cache:', e);
   }
@@ -173,6 +214,7 @@ function saveToCache() {
 // Toast
 function showToast(msg, type = 'success') {
   const c = document.getElementById('toast-container');
+  if (!c) return;
   const t = document.createElement('div');
   const bg = type === 'success' ? '#00b894' : type === 'error' ? '#e74c3c' : '#6c5ce7';
   t.className = 'toast px-4 py-3 rounded-lg text-sm font-medium text-white shadow-lg';
@@ -185,29 +227,41 @@ function showToast(msg, type = 'success') {
 // Tabs
 function switchTab(name) {
   ['participants','import','email','scanner'].forEach(t => {
-    document.getElementById('panel-' + t).classList.toggle('hidden', t !== name);
+    const panel = document.getElementById('panel-' + t);
+    if (panel) panel.classList.toggle('hidden', t !== name);
+    
     const btn = document.getElementById('tab-' + t);
-    btn.classList.toggle('tab-active', t === name);
-    btn.classList.toggle('text-[#6c5ce7]', t === name);
-    btn.classList.toggle('border-[#6c5ce7]', t === name);
-    btn.classList.toggle('text-[#7a7d8e]', t !== name);
+    if (btn) {
+      btn.classList.toggle('tab-active', t === name);
+      btn.classList.toggle('text-[#6c5ce7]', t === name);
+      btn.classList.toggle('border-[#6c5ce7]', t === name);
+      btn.classList.toggle('text-[#7a7d8e]', t !== name);
+    }
   });
   if (name === 'email') updateEmailSelect();
-  lucide.createIcons();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // QR generation
 function generateQRDataURL(text) {
-  const qr = qrcode(0, 'M');
-  qr.addData(text);
-  qr.make();
-  return qr.createDataURL(6, 4);
+  try {
+    const qr = qrcode(0, 'M');
+    qr.addData(text);
+    qr.make();
+    return qr.createDataURL(6, 4);
+  } catch (e) {
+    console.error('QR generation failed:', e);
+    return '';
+  }
 }
 
 function generateQRToken(name, email) {
   const raw = `EVTCHK|${name}|${email}|${Date.now()}`;
   let hash = 0;
-  for (let i = 0; i < raw.length; i++) { hash = ((hash << 5) - hash) + raw.charCodeAt(i); hash |= 0; }
+  for (let i = 0; i < raw.length; i++) { 
+    hash = ((hash << 5) - hash) + raw.charCodeAt(i); 
+    hash |= 0; 
+  }
   return `EVTCHK-${Math.abs(hash).toString(36).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
 }
 
@@ -215,6 +269,8 @@ function generateQRToken(name, email) {
 function renderParticipants() {
   const list = document.getElementById('participant-list');
   const empty = document.getElementById('empty-state');
+  if (!list || !empty) return;
+  
   empty.classList.toggle('hidden', participants.length > 0);
 
   const existingMap = new Map([...list.children].map(el => [el.dataset.id, el]));
@@ -233,8 +289,10 @@ function renderParticipants() {
     }
   });
 
-  document.getElementById('stat-total').textContent = participants.length;
-  document.getElementById('stat-checked').textContent = participants.filter(p => p.checked_in).length;
+  const totalEl = document.getElementById('stat-total');
+  const checkedEl = document.getElementById('stat-checked');
+  if (totalEl) totalEl.textContent = participants.length;
+  if (checkedEl) checkedEl.textContent = participants.filter(p => p.checked_in).length;
 }
 
 function createParticipantCard(p) {
@@ -254,33 +312,49 @@ function updateParticipantCard(div, p) {
   div.innerHTML = `
     <img src="${qrImg}" alt="QR for ${p.name}" class="w-14 h-14 rounded-lg border border-[#2a2d3a]">
     <div class="flex-1 min-w-0">
-      <p class="font-semibold text-sm truncate">${p.name}</p>
-      <p class="text-xs text-[#7a7d8e] truncate">${p.email}</p>
-      <p class="text-[10px] text-[#555] mt-0.5 font-mono truncate">${p.qr_data}</p>
+      <p class="font-semibold text-sm truncate">${escapeHtml(p.name)}</p>
+      <p class="text-xs text-[#7a7d8e] truncate">${escapeHtml(p.email)}</p>
+      <p class="text-[10px] text-[#555] mt-0.5 font-mono truncate">${escapeHtml(p.qr_data)}</p>
     </div>
     <div class="flex items-center gap-2 shrink-0">
       ${checkedBadge}
-      <button onclick="toggleCheckIn('${p.id}')" class="p-2 rounded-lg hover:bg-[#1e2030] transition" title="${p.checked_in ? 'Undo check-in' : 'Check in'}">
+      <button onclick="toggleCheckIn('${escapeAttr(p.id)}')" class="p-2 rounded-lg hover:bg-[#1e2030] transition" title="${p.checked_in ? 'Undo check-in' : 'Check in'}">
         <i data-lucide="${p.checked_in ? 'user-check' : 'log-in'}" class="w-4 h-4 ${p.checked_in ? 'text-[#00b894]' : 'text-[#7a7d8e]'}"></i>
       </button>
-      <button onclick="deleteParticipant('${p.id}')" class="p-2 rounded-lg hover:bg-red-500/10 transition" title="Remove">
+      <button onclick="deleteParticipant('${escapeAttr(p.id)}')" class="p-2 rounded-lg hover:bg-red-500/10 transition" title="Remove">
         <i data-lucide="trash-2" class="w-4 h-4 text-red-400"></i>
       </button>
     </div>
   `;
-  lucide.createIcons();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// HTML escaping
+function escapeHtml(text) {
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+  return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+function escapeAttr(text) {
+  return text.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
 }
 
 // CRUD
 async function addParticipant(name, email) {
-  if (participants.length >= 999) { showToast('Maximum 999 participants reached!', 'error'); return; }
+  if (participants.length >= 999) { 
+    showToast('Maximum 999 participants reached!', 'error'); 
+    return; 
+  }
   const qr_data = generateQRToken(name, email);
   const btn = document.getElementById('add-btn');
-  btn.disabled = true; btn.textContent = 'Adding...';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4"></i> Adding...';
+  }
   
   // Add to local state
   participants.push({
-    id: Date.now().toString(),
+    id: Date.now().toString() + Math.random(),
     name,
     email,
     qr_data,
@@ -290,8 +364,11 @@ async function addParticipant(name, email) {
   saveToCache();
   renderParticipants();
 
-  btn.disabled = false; btn.innerHTML = '<i data-lucide="plus" class="w-4 h-4"></i> Add';
-  lucide.createIcons();
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="plus" class="w-4 h-4"></i> Add';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
   showToast(`${name} added!`);
 }
 
@@ -307,8 +384,7 @@ function toggleCheckIn(id) {
 function deleteParticipant(id) {
   const p = participants.find(x => x.id === id);
   if (!p) return;
-  // Inline confirm
-  const card = document.querySelector(`[data-id="${id}"]`);
+  const card = document.querySelector(`[data-id="${escapeAttr(id)}"]`);
   if (!card) return;
   if (card.dataset.confirming === 'true') {
     participants = participants.filter(x => x.id !== id);
@@ -320,7 +396,10 @@ function deleteParticipant(id) {
     const btns = card.querySelectorAll('button');
     const delBtn = btns[btns.length - 1];
     delBtn.innerHTML = '<span class="text-xs text-red-400 font-semibold">Confirm?</span>';
-    setTimeout(() => { card.dataset.confirming = 'false'; renderParticipants(); }, 3000);
+    setTimeout(() => { 
+      card.dataset.confirming = 'false'; 
+      renderParticipants(); 
+    }, 3000);
   }
 }
 
@@ -332,13 +411,19 @@ document.getElementById('csv-input').addEventListener('change', function(e) {
   reader.onload = function(ev) {
     const text = ev.target.result;
     const lines = text.split(/\r?\n/).filter(l => l.trim());
-    if (lines.length < 2) { showToast('CSV has no data rows', 'error'); return; }
+    if (lines.length < 2) { 
+      showToast('CSV has no data rows', 'error'); 
+      return; 
+    }
 
     const header = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/['"]/g, ''));
     const nameIdx = header.findIndex(h => h === 'name' || h === 'full name' || h === 'fullname');
     const emailIdx = header.findIndex(h => h === 'email' || h === 'e-mail' || h === 'email address');
 
-    if (nameIdx === -1 || emailIdx === -1) { showToast('CSV must have "name" and "email" columns', 'error'); return; }
+    if (nameIdx === -1 || emailIdx === -1) { 
+      showToast('CSV must have "name" and "email" columns', 'error'); 
+      return; 
+    }
 
     csvParsed = [];
     for (let i = 1; i < lines.length; i++) {
@@ -348,23 +433,37 @@ document.getElementById('csv-input').addEventListener('change', function(e) {
       }
     }
 
-    document.getElementById('csv-preview').classList.remove('hidden');
-    document.getElementById('csv-count').textContent = `${csvParsed.length} participants found`;
+    const previewDiv = document.getElementById('csv-preview');
+    if (previewDiv) previewDiv.classList.remove('hidden');
+    
+    const countEl = document.getElementById('csv-count');
+    if (countEl) countEl.textContent = `${csvParsed.length} participants found`;
+    
     const previewList = document.getElementById('csv-preview-list');
-    previewList.innerHTML = csvParsed.slice(0, 20).map(p => `<div>${p.name} — ${p.email}</div>`).join('');
-    if (csvParsed.length > 20) previewList.innerHTML += `<div class="text-[#6c5ce7]">... and ${csvParsed.length - 20} more</div>`;
+    if (previewList) {
+      previewList.innerHTML = csvParsed.slice(0, 20).map(p => `<div>${escapeHtml(p.name)} — ${escapeHtml(p.email)}</div>`).join('');
+      if (csvParsed.length > 20) previewList.innerHTML += `<div class="text-[#6c5ce7]">... and ${csvParsed.length - 20} more</div>`;
+    }
   };
   reader.readAsText(file);
 });
 
 async function confirmImport() {
   const btn = document.getElementById('import-btn');
-  btn.disabled = true; btn.textContent = 'Importing...';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Importing...';
+  }
+  
   let added = 0;
   for (const p of csvParsed) {
-    if (participants.length + added >= 999) { showToast('Limit reached at 999!', 'error'); break; }
+    if (participants.length + added >= 999) { 
+      showToast('Limit reached at 999!', 'error'); 
+      break; 
+    }
     const existingEmails = participants.map(x => x.email.toLowerCase());
     if (existingEmails.includes(p.email.toLowerCase())) continue;
+    
     const qr_data = generateQRToken(p.name, p.email);
     participants.push({
       id: Date.now().toString() + Math.random(),
@@ -377,34 +476,55 @@ async function confirmImport() {
     added++;
   }
   saveToCache();
-  btn.disabled = false; btn.textContent = 'Import All Participants';
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = 'Import All Participants';
+  }
   renderParticipants();
   showToast(`${added} participants imported!`);
   csvParsed = [];
-  document.getElementById('csv-preview').classList.add('hidden');
-  document.getElementById('csv-input').value = '';
+  
+  const previewDiv = document.getElementById('csv-preview');
+  if (previewDiv) previewDiv.classList.add('hidden');
+  
+  const csvInput = document.getElementById('csv-input');
+  if (csvInput) csvInput.value = '';
 }
 
 // Email
 function updateEmailSelect() {
   const sel = document.getElementById('email-select');
+  if (!sel) return;
+  
   sel.innerHTML = '<option value="all">All Participants</option>';
   participants.forEach(p => {
-    sel.innerHTML += `<option value="${p.id}">${p.name} (${p.email})</option>`;
+    sel.innerHTML += `<option value="${escapeAttr(p.id)}">${escapeHtml(p.name)} (${escapeHtml(p.email)})</option>`;
   });
+  
   // Show preview for first participant
   if (participants.length > 0) previewEmail(participants[0]);
 
   sel.onchange = function() {
-    if (this.value === 'all' && participants.length > 0) previewEmail(participants[0]);
-    else { const p = participants.find(x => x.id === this.value); if (p) previewEmail(p); }
+    if (this.value === 'all' && participants.length > 0) {
+      previewEmail(participants[0]);
+    } else { 
+      const p = participants.find(x => x.id === this.value); 
+      if (p) previewEmail(p); 
+    }
   };
 }
 
 function previewEmail(p) {
-  const cfg = window.elementSdk?.config || defaultConfig;
-  const subject = document.getElementById('email-subject').value;
-  const bodyTemplate = document.getElementById('email-body').value;
+  const cfg = (typeof window !== 'undefined' && window.elementSdk && window.elementSdk.config) ? window.elementSdk.config : defaultConfig;
+  const subjectEl = document.getElementById('email-subject');
+  const bodyEl = document.getElementById('email-body');
+  const previewEl = document.getElementById('email-preview');
+  
+  if (!subjectEl || !bodyEl || !previewEl) return;
+  
+  const subject = subjectEl.value;
+  const bodyTemplate = bodyEl.value;
+  
   const body = bodyTemplate
     .replace(/\{name\}/g, p.name)
     .replace(/\{event\}/g, cfg.event_name || defaultConfig.event_name)
@@ -412,25 +532,39 @@ function previewEmail(p) {
     .replace(/\{organizer\}/g, cfg.organizer_name || defaultConfig.organizer_name);
 
   const qrImg = generateQRDataURL(p.qr_data);
-  document.getElementById('email-preview').innerHTML = `
+  const qrPlaceholder = `[QR CODE]`;
+  
+  const qrHtml = qrImg 
+    ? `<div style="text-align:center;margin:16px 0;"><img src="${qrImg}" style="width:160px;height:160px;border-radius:8px;border:1px solid #ddd;" alt="QR Code"><p style="font-size:10px;color:#999;margin-top:4px;font-family:monospace;word-break:break-all;">${escapeHtml(p.qr_data)}</p></div>`
+    : `<div style="text-align:center;margin:16px 0;background:#f0f0f0;padding:20px;border-radius:8px;"><p style="color:#999;">QR Code</p></div>`;
+
+  previewEl.innerHTML = `
     <div style="font-family: 'DM Sans', sans-serif;">
-      <p style="font-size:12px;color:#999;margin-bottom:8px;">To: ${p.email}</p>
-      <p style="font-size:14px;font-weight:700;margin-bottom:16px;">${subject}</p>
-      <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;color:#444;">${body.replace('[QR CODE WILL BE ATTACHED]', `<div style="text-align:center;margin:16px 0;"><img src="${qrImg}" style="width:160px;height:160px;border-radius:8px;border:1px solid #eee;" alt="QR Code"><p style="font-size:10px;color:#999;margin-top:4px;font-family:monospace;">${p.qr_data}</p></div>`)}</div>
+      <p style="font-size:12px;color:#999;margin-bottom:8px;"><strong>To:</strong> ${escapeHtml(p.email)}</p>
+      <p style="font-size:14px;font-weight:700;margin-bottom:16px;color:#222;">${escapeHtml(subject)}</p>
+      <div style="white-space:pre-wrap;font-size:13px;line-height:1.6;color:#444;">${escapeHtml(body).replace(new RegExp(escapeHtml(qrPlaceholder), 'g'), () => qrHtml)}</div>
     </div>
   `;
 }
 
 function generateEmails() {
-  const cfg = window.elementSdk?.config || defaultConfig;
+  const cfg = (typeof window !== 'undefined' && window.elementSdk && window.elementSdk.config) ? window.elementSdk.config : defaultConfig;
   const sel = document.getElementById('email-select');
-  const subject = document.getElementById('email-subject').value;
-  const bodyTemplate = document.getElementById('email-body').value;
-  const targets = sel.value === 'all' ? participants : participants.filter(p => p.id === sel.value);
+  const subjectEl = document.getElementById('email-subject');
+  const bodyEl = document.getElementById('email-body');
   const linksDiv = document.getElementById('email-links');
+  
+  if (!sel || !subjectEl || !bodyEl || !linksDiv) return;
+  
+  const subject = subjectEl.value;
+  const bodyTemplate = bodyEl.value;
+  const targets = sel.value === 'all' ? participants : participants.filter(p => p.id === sel.value);
   linksDiv.innerHTML = '';
 
-  if (targets.length === 0) { showToast('No participants to email', 'error'); return; }
+  if (targets.length === 0) { 
+    showToast('No participants to email', 'error'); 
+    return; 
+  }
 
   targets.forEach(p => {
     const body = bodyTemplate
@@ -438,15 +572,16 @@ function generateEmails() {
       .replace(/\{event\}/g, cfg.event_name || defaultConfig.event_name)
       .replace(/\{date\}/g, cfg.event_date || defaultConfig.event_date)
       .replace(/\{organizer\}/g, cfg.organizer_name || defaultConfig.organizer_name)
-      .replace('[QR CODE WILL BE ATTACHED]', `\n[QR Code: ${p.qr_data}]\n`);
+      .replace('[QR CODE]', `[QR Code: ${p.qr_data}]`);
     const mailto = `mailto:${encodeURIComponent(p.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     linksDiv.innerHTML += `
       <a href="${mailto}" target="_blank" rel="noopener noreferrer" class="block bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-4 py-2.5 text-sm hover:border-[#6c5ce7] transition flex items-center justify-between">
-        <span class="truncate">${p.name} — ${p.email}</span>
+        <span class="truncate">${escapeHtml(p.name)} — ${escapeHtml(p.email)}</span>
         <i data-lucide="external-link" class="w-3 h-3 text-[#7a7d8e] shrink-0"></i>
       </a>`;
   });
-  lucide.createIcons();
+  
+  if (typeof lucide !== 'undefined') lucide.createIcons();
   showToast(`${targets.length} email link(s) generated!`);
 }
 
@@ -460,14 +595,19 @@ async function startCamera() {
       video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
     });
     const video = document.getElementById('camera-stream');
+    if (!video) throw new Error('Video element not found');
+    
     video.srcObject = cameraStream;
     
-    document.getElementById('manual-view').classList.add('hidden');
-    document.getElementById('camera-view').classList.remove('hidden');
-    lucide.createIcons();
+    const manualView = document.getElementById('manual-view');
+    const cameraView = document.getElementById('camera-view');
+    if (manualView) manualView.classList.add('hidden');
+    if (cameraView) cameraView.classList.remove('hidden');
+    
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     
     // Start scanning
-    scanQRCode();
+    setTimeout(() => scanQRCode(), 500);
   } catch (err) {
     showToast('Camera access denied. Use manual entry instead.', 'error');
     console.error('Camera error:', err);
@@ -481,13 +621,18 @@ function stopCamera() {
   }
   if (animationId) cancelAnimationFrame(animationId);
   
-  document.getElementById('camera-view').classList.add('hidden');
-  document.getElementById('manual-view').classList.remove('hidden');
-  lucide.createIcons();
+  const cameraView = document.getElementById('camera-view');
+  const manualView = document.getElementById('manual-view');
+  if (cameraView) cameraView.classList.add('hidden');
+  if (manualView) manualView.classList.remove('hidden');
+  
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function scanQRCode() {
   const video = document.getElementById('camera-stream');
+  if (!video) return;
+  
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   
@@ -506,14 +651,15 @@ function scanQRCode() {
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     
     try {
-      const code = jsQR(imageData.data, imageData.width, imageData.height);
-      if (code && code.data) {
-        handleQRDetection(code.data);
-        stopCamera();
-        return;
+      if (typeof jsQR !== 'undefined') {
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        if (code && code.data) {
+          handleQRDetection(code.data);
+          return;
+        }
       }
     } catch (e) {
-      // Continue scanning
+      console.error('QR scan error:', e);
     }
     
     animationId = requestAnimationFrame(scan);
@@ -523,27 +669,42 @@ function scanQRCode() {
 }
 
 function handleQRDetection(data) {
+  stopCamera();
   document.getElementById('scan-input').value = data;
   verifyQR();
 }
 
 async function verifyQR() {
   const input = document.getElementById('scan-input');
-  const data = input.value.trim();
-  if (!data) { showToast('Enter QR code data', 'error'); return; }
-
   const btn = document.getElementById('verify-btn');
-  btn.disabled = true; btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Verifying...';
+  const resultDiv = document.getElementById('scan-result');
+  
+  if (!input || !btn || !resultDiv) return;
+  
+  const data = input.value.trim();
+  if (!data) { 
+    showToast('Enter QR code data', 'error'); 
+    return; 
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Verifying...';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 
   // Simulate brief check
   await new Promise(r => setTimeout(r, 400));
 
   const match = participants.find(p => p.qr_data === data);
-  const resultDiv = document.getElementById('scan-result');
   resultDiv.classList.remove('hidden');
 
-  const logEntry = { time: new Date().toLocaleTimeString(), data, found: !!match, name: match?.name || 'Unknown' };
+  const logEntry = { 
+    time: new Date().toLocaleTimeString(), 
+    data, 
+    found: !!match, 
+    name: match ? match.name : 'Unknown' 
+  };
   verifyHistory.unshift(logEntry);
+  if (verifyHistory.length > 100) verifyHistory = verifyHistory.slice(0, 100);
   saveToCache();
 
   if (match) {
@@ -553,10 +714,10 @@ async function verifyQR() {
           <i data-lucide="check-circle" class="w-7 h-7 text-[#00b894]"></i>
         </div>
         <p class="text-[#00b894] font-bold text-lg">Verified ✓</p>
-        <p class="text-sm mt-1">${match.name}</p>
-        <p class="text-xs text-[#7a7d8e]">${match.email}</p>
+        <p class="text-sm mt-1">${escapeHtml(match.name)}</p>
+        <p class="text-xs text-[#7a7d8e]">${escapeHtml(match.email)}</p>
         <p class="text-xs mt-1 ${match.checked_in ? 'text-yellow-400' : 'text-[#7a7d8e]'}">${match.checked_in ? '⚠ Already checked in' : 'Not yet checked in'}</p>
-        ${!match.checked_in ? `<button onclick="toggleCheckIn('${match.id}')" class="mt-3 bg-[#00b894] hover:bg-[#00a381] text-white px-4 py-2 rounded-lg text-xs font-semibold transition">Check In Now</button>` : ''}
+        ${!match.checked_in ? `<button onclick="toggleCheckIn('${escapeAttr(match.id)}')" class="mt-3 bg-[#00b894] hover:bg-[#00a381] text-white px-4 py-2 rounded-lg text-xs font-semibold transition">Check In Now</button>` : ''}
       </div>`;
   } else {
     resultDiv.innerHTML = `
@@ -575,16 +736,23 @@ async function verifyQR() {
   btn.disabled = false;
   btn.innerHTML = '<i data-lucide="shield-check" class="w-4 h-4"></i> Verify Participant';
   input.value = '';
-  lucide.createIcons();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function updateVerifyLog() {
   const logDiv = document.getElementById('verify-log');
+  if (!logDiv) return;
+  
+  if (verifyHistory.length === 0) {
+    logDiv.innerHTML = '<p class="text-xs text-[#7a7d8e] text-center py-4">No verifications yet.</p>';
+    return;
+  }
+  
   logDiv.innerHTML = verifyHistory.slice(0, 20).map(e => `
     <div class="flex items-center gap-2 text-xs py-1.5 border-b border-[#2a2d3a]">
       <span class="w-2 h-2 rounded-full shrink-0 ${e.found ? 'bg-[#00b894]' : 'bg-red-400'}"></span>
-      <span class="text-[#7a7d8e]">${e.time}</span>
-      <span class="flex-1 truncate">${e.name}</span>
+      <span class="text-[#7a7d8e]">${escapeHtml(e.time)}</span>
+      <span class="flex-1 truncate">${escapeHtml(e.name)}</span>
       <span class="${e.found ? 'text-[#00b894]' : 'text-red-400'}">${e.found ? 'Valid' : 'Invalid'}</span>
     </div>
   `).join('');
@@ -593,70 +761,97 @@ function updateVerifyLog() {
 // Form
 document.getElementById('add-form').addEventListener('submit', function(e) {
   e.preventDefault();
-  const name = document.getElementById('add-name').value.trim();
-  const email = document.getElementById('add-email').value.trim();
-  if (!name || !email) { showToast('Please fill both fields', 'error'); return; }
-  if (participants.some(p => p.email.toLowerCase() === email.toLowerCase())) { showToast('Email already registered', 'error'); return; }
+  const nameEl = document.getElementById('add-name');
+  const emailEl = document.getElementById('add-email');
+  
+  if (!nameEl || !emailEl) return;
+  
+  const name = nameEl.value.trim();
+  const email = emailEl.value.trim();
+  
+  if (!name || !email) { 
+    showToast('Please fill both fields', 'error'); 
+    return; 
+  }
+  if (participants.some(p => p.email.toLowerCase() === email.toLowerCase())) { 
+    showToast('Email already registered', 'error'); 
+    return; 
+  }
+  
   addParticipant(name, email);
-  document.getElementById('add-name').value = '';
-  document.getElementById('add-email').value = '';
+  nameEl.value = '';
+  emailEl.value = '';
 });
 
 // Email preview on input change
 document.getElementById('email-body').addEventListener('input', () => {
   const sel = document.getElementById('email-select');
-  const p = sel.value === 'all' ? participants[0] : participants.find(x => x.id === sel.value);
-  if (p) previewEmail(p);
-});
-document.getElementById('email-subject').addEventListener('input', () => {
-  const sel = document.getElementById('email-select');
+  if (!sel) return;
   const p = sel.value === 'all' ? participants[0] : participants.find(x => x.id === sel.value);
   if (p) previewEmail(p);
 });
 
-// Element SDK
+document.getElementById('email-subject').addEventListener('input', () => {
+  const sel = document.getElementById('email-select');
+  if (!sel) return;
+  const p = sel.value === 'all' ? participants[0] : participants.find(x => x.id === sel.value);
+  if (p) previewEmail(p);
+});
+
+// Element SDK (with fallback)
 async function applyConfig(config) {
   const c = { ...defaultConfig, ...config };
-  document.getElementById('header-title').textContent = c.event_name;
-  document.getElementById('header-date').textContent = c.event_date + ' • ' + c.organizer_name;
-  document.getElementById('email-subject').value = c.email_subject || defaultConfig.email_subject;
+  const headerTitle = document.getElementById('header-title');
+  const headerDate = document.getElementById('header-date');
+  const emailSubject = document.getElementById('email-subject');
+  
+  if (headerTitle) headerTitle.textContent = c.event_name;
+  if (headerDate) headerDate.textContent = c.event_date + ' • ' + c.organizer_name;
+  if (emailSubject) emailSubject.value = c.email_subject || defaultConfig.email_subject;
 
   document.body.style.background = c.background_color;
   document.body.style.color = c.text_color;
   document.body.style.fontFamily = `${c.font_family}, DM Sans, sans-serif`;
 }
 
-window.elementSdk.init({
-  defaultConfig,
-  onConfigChange: async (config) => { await applyConfig(config); },
-  mapToCapabilities: (config) => ({
-    recolorables: [
-      { get: () => config.background_color || defaultConfig.background_color, set: (v) => { config.background_color = v; window.elementSdk.setConfig({ background_color: v }); } },
-      { get: () => config.surface_color || defaultConfig.surface_color, set: (v) => { config.surface_color = v; window.elementSdk.setConfig({ surface_color: v }); } },
-      { get: () => config.text_color || defaultConfig.text_color, set: (v) => { config.text_color = v; window.elementSdk.setConfig({ text_color: v }); } },
-      { get: () => config.accent_color || defaultConfig.accent_color, set: (v) => { config.accent_color = v; window.elementSdk.setConfig({ accent_color: v }); } },
-      { get: () => config.success_color || defaultConfig.success_color, set: (v) => { config.success_color = v; window.elementSdk.setConfig({ success_color: v }); } },
-    ],
-    borderables: [],
-    fontEditable: {
-      get: () => config.font_family || defaultConfig.font_family,
-      set: (v) => { config.font_family = v; window.elementSdk.setConfig({ font_family: v }); }
-    },
-    fontSizeable: {
-      get: () => config.font_size || defaultConfig.font_size,
-      set: (v) => { config.font_size = v; window.elementSdk.setConfig({ font_size: v }); }
-    }
-  }),
-  mapToEditPanelValues: (config) => new Map([
-    ['event_name', config.event_name || defaultConfig.event_name],
-    ['event_date', config.event_date || defaultConfig.event_date],
-    ['organizer_name', config.organizer_name || defaultConfig.organizer_name],
-    ['email_subject', config.email_subject || defaultConfig.email_subject],
-  ])
-});
+// Safe Element SDK initialization
+if (typeof window !== 'undefined' && window.elementSdk) {
+  try {
+    window.elementSdk.init({
+      defaultConfig,
+      onConfigChange: async (config) => { await applyConfig(config); },
+      mapToCapabilities: (config) => ({
+        recolorables: [
+          { get: () => config.background_color || defaultConfig.background_color, set: (v) => { config.background_color = v; if (window.elementSdk) window.elementSdk.setConfig({ background_color: v }); } },
+          { get: () => config.surface_color || defaultConfig.surface_color, set: (v) => { config.surface_color = v; if (window.elementSdk) window.elementSdk.setConfig({ surface_color: v }); } },
+          { get: () => config.text_color || defaultConfig.text_color, set: (v) => { config.text_color = v; if (window.elementSdk) window.elementSdk.setConfig({ text_color: v }); } },
+          { get: () => config.accent_color || defaultConfig.accent_color, set: (v) => { config.accent_color = v; if (window.elementSdk) window.elementSdk.setConfig({ accent_color: v }); } },
+          { get: () => config.success_color || defaultConfig.success_color, set: (v) => { config.success_color = v; if (window.elementSdk) window.elementSdk.setConfig({ success_color: v }); } },
+        ],
+        borderables: [],
+        fontEditable: {
+          get: () => config.font_family || defaultConfig.font_family,
+          set: (v) => { config.font_family = v; if (window.elementSdk) window.elementSdk.setConfig({ font_family: v }); }
+        },
+        fontSizeable: {
+          get: () => config.font_size || defaultConfig.font_size,
+          set: (v) => { config.font_size = v; if (window.elementSdk) window.elementSdk.setConfig({ font_size: v }); }
+        }
+      }),
+      mapToEditPanelValues: (config) => new Map([
+        ['event_name', config.event_name || defaultConfig.event_name],
+        ['event_date', config.event_date || defaultConfig.event_date],
+        ['organizer_name', config.organizer_name || defaultConfig.organizer_name],
+        ['email_subject', config.email_subject || defaultConfig.email_subject],
+      ])
+    });
+  } catch (e) {
+    console.error('Element SDK initialization failed:', e);
+  }
+}
 
-lucide.createIcons();
+if (typeof lucide !== 'undefined') lucide.createIcons();
 loadFromCache();
-</script>
+  </script>
  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e302592a13fa6ed',t:'MTc3NDYzMjg3Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
