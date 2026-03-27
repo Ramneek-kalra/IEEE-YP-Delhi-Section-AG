@@ -8,6 +8,8 @@
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js" async defer></script>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
   <style>
 * { font-family: 'DM Sans', sans-serif; }
@@ -22,10 +24,10 @@
 /* Mobile-first responsive improvements */
 @media (max-width: 640px) {
   body { font-size: 14px; }
-  header { px-4 py-3; }
+  header { padding: 0.75rem 1rem; }
   nav { gap: 0; overflow-x: auto; scroll-behavior: smooth; }
   nav button { flex-shrink: 0; font-size: 12px; padding: 0.5rem 0.75rem; gap: 0.25rem; }
-  nav i { width: 3.5 !important; height: 3.5 !important; }
+  nav i { width: 0.875rem !important; height: 0.875rem !important; }
   main { padding: 0.75rem; }
   input, textarea, select { font-size: 16px; padding: 0.75rem; }
   .grid.md\:grid-cols-2 { grid-template-columns: 1fr !important; }
@@ -131,6 +133,20 @@ Best regards,
        <div class="mt-3 md:mt-4"><label for="email-select" class="block text-xs text-[#7a7d8e] mb-1">Send to</label> <select id="email-select" class="w-full bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-3 py-2 text-xs md:text-sm text-[#e2e4e9] outline-none focus:border-[#6c5ce7]"><option value="all">All Participants</option></select>
         <div class="mt-2 md:mt-3 p-2 md:p-3 bg-[#1e2030] rounded-lg text-xs text-[#7a7d8e] space-y-1.5 md:space-y-2">
          <p class="font-semibold text-[#e2e4e9]">📧 Email Options:</p>
+         <div class="border border-[#2a2d3a] rounded-lg p-2.5 space-y-2">
+          <p class="font-semibold text-[#e2e4e9]">Google Gmail API</p>
+          <input id="google-client-id" placeholder="Google OAuth Client ID" class="w-full bg-[#161922] border border-[#2a2d3a] rounded-lg px-3 py-2 text-xs text-[#e2e4e9] outline-none focus:border-[#6c5ce7]">
+          <input id="google-api-key" placeholder="Google API Key" class="w-full bg-[#161922] border border-[#2a2d3a] rounded-lg px-3 py-2 text-xs text-[#e2e4e9] outline-none focus:border-[#6c5ce7]">
+          <div id="gmail-auth-status" class="text-[11px] text-[#7a7d8e]">Not connected</div>
+          <div class="flex gap-2">
+           <button onclick="googleSignIn()" id="google-login-btn" class="flex-1 bg-[#4285F4] hover:bg-[#357ae8] text-white px-3 py-2 rounded-lg text-xs font-semibold transition">Sign in with Google</button>
+           <button onclick="googleSignOut()" id="google-logout-btn" class="flex-1 bg-[#7a7d8e] hover:bg-[#888] text-white px-3 py-2 rounded-lg text-xs font-semibold transition">Sign out</button>
+          </div>
+          <button onclick="sendViaGmail()" id="gmail-send-btn" class="w-full bg-[#EA4335] hover:bg-[#d63b2e] text-white px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition">
+           <i data-lucide="send" class="w-3.5 h-3.5"></i> Send via Gmail
+          </button>
+          <p class="text-[10px] text-[#7a7d8e]">Enable Gmail API in Google Cloud and add this app origin to Authorized JavaScript origins.</p>
+         </div>
          <button onclick="generateEmailsWithQR()" class="w-full bg-[#6c5ce7] hover:bg-[#5a4bd6] text-white px-3 md:px-5 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 md:gap-2 transition">
           <i data-lucide="download" class="w-3.5 h-3.5 md:w-4 md:h-4"></i> <span class="hidden sm:inline">Download HTML</span><span class="sm:hidden">HTML</span>
          </button>
@@ -208,6 +224,11 @@ let csvParsed = [];
 let verifyHistory = [];
 const STORAGE_KEY = 'cafe_samvad_participants';
 const HISTORY_KEY = 'cafe_samvad_history';
+const GMAIL_CONFIG_KEY = 'cafe_samvad_gmail_config';
+const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
+let gmailAccessToken = '';
+let tokenClient = null;
+let gapiInited = false;
 
 const defaultConfig = {
   event_name: 'Cafe संवाद',
@@ -242,6 +263,191 @@ function showToast(msg, type = 'success') {
   t.textContent = msg;
   c.appendChild(t);
   setTimeout(() => t.remove(), 3000);
+}
+
+function loadGmailConfig() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(GMAIL_CONFIG_KEY) || '{}');
+    const clientIdEl = document.getElementById('google-client-id');
+    const apiKeyEl = document.getElementById('google-api-key');
+    if (clientIdEl && saved.clientId) clientIdEl.value = saved.clientId;
+    if (apiKeyEl && saved.apiKey) apiKeyEl.value = saved.apiKey;
+  } catch (e) {
+    console.error('Failed to load Gmail config:', e);
+  }
+}
+
+function saveGmailConfig() {
+  const clientIdEl = document.getElementById('google-client-id');
+  const apiKeyEl = document.getElementById('google-api-key');
+  if (!clientIdEl || !apiKeyEl) return;
+  localStorage.setItem(GMAIL_CONFIG_KEY, JSON.stringify({
+    clientId: clientIdEl.value.trim(),
+    apiKey: apiKeyEl.value.trim()
+  }));
+}
+
+function updateGmailStatus(text, isError = false) {
+  const statusEl = document.getElementById('gmail-auth-status');
+  if (!statusEl) return;
+  statusEl.textContent = text;
+  statusEl.classList.toggle('text-red-400', isError);
+  statusEl.classList.toggle('text-[#7a7d8e]', !isError);
+}
+
+async function ensureGapiLoaded() {
+  if (gapiInited) return;
+  if (typeof gapi === 'undefined') throw new Error('Google API script not loaded');
+  await new Promise((resolve, reject) => {
+    gapi.load('client', { callback: resolve, onerror: reject });
+  });
+  gapiInited = true;
+}
+
+async function googleSignIn() {
+  const clientIdEl = document.getElementById('google-client-id');
+  const apiKeyEl = document.getElementById('google-api-key');
+  if (!clientIdEl || !apiKeyEl) return;
+  const clientId = clientIdEl.value.trim();
+  const apiKey = apiKeyEl.value.trim();
+  if (!clientId || !apiKey) {
+    showToast('Enter Google Client ID and API Key', 'error');
+    updateGmailStatus('Missing Google credentials', true);
+    return;
+  }
+  saveGmailConfig();
+  updateGmailStatus('Connecting...');
+  try {
+    await ensureGapiLoaded();
+    await gapi.client.init({
+      apiKey,
+      discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest']
+    });
+    if (!window.google || !google.accounts || !google.accounts.oauth2) {
+      throw new Error('Google Identity Services not available');
+    }
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: clientId,
+      scope: GMAIL_SCOPE,
+      callback: (resp) => {
+        if (resp && resp.access_token) {
+          gmailAccessToken = resp.access_token;
+          gapi.client.setToken({ access_token: gmailAccessToken });
+          updateGmailStatus('Connected to Gmail');
+          showToast('Google login successful');
+        } else {
+          updateGmailStatus('Google login failed', true);
+          showToast('Google login failed', 'error');
+        }
+      }
+    });
+    tokenClient.requestAccessToken({ prompt: 'consent' });
+  } catch (e) {
+    console.error('Google sign-in failed:', e);
+    updateGmailStatus('Google login error', true);
+    showToast('Google sign-in failed. Check API key/client ID.', 'error');
+  }
+}
+
+function googleSignOut() {
+  if (gmailAccessToken && window.google && google.accounts && google.accounts.oauth2) {
+    google.accounts.oauth2.revoke(gmailAccessToken);
+  }
+  gmailAccessToken = '';
+  if (typeof gapi !== 'undefined' && gapi.client) gapi.client.setToken(null);
+  updateGmailStatus('Not connected');
+  showToast('Signed out from Google', 'info');
+}
+
+function buildEmailForParticipant(participant, bodyTemplate) {
+  return bodyTemplate
+    .replace(/\{name\}/g, participant.name)
+    .replace(/\{event\}/g, defaultConfig.event_name)
+    .replace(/\{date\}/g, defaultConfig.event_date)
+    .replace(/\{organizer\}/g, defaultConfig.organizer_name);
+}
+
+function buildGmailHtmlBody(participant, bodyTemplate) {
+  const replacedBody = buildEmailForParticipant(participant, bodyTemplate);
+  const qrDataUrl = generateQRDataURL(participant.qr_data);
+  const bodyWithBreaks = escapeHtml(replacedBody).replace(/\n/g, '<br>');
+  const qrBlock = qrDataUrl
+    ? `<div style="text-align:center;margin:18px 0;"><img src="${qrDataUrl}" alt="QR Code" style="width:180px;height:180px;border:1px solid #ddd;border-radius:10px;"><p style="font-size:11px;color:#999;margin-top:8px;font-family:monospace;word-break:break-all;">${escapeHtml(participant.qr_data)}</p></div>`
+    : `<div style="text-align:center;margin:18px 0;color:#999;">QR code unavailable</div>`;
+  return `<!doctype html><html><body style="margin:0;padding:0;background:#f6f7fb;font-family:'DM Sans',Arial,sans-serif;"><div style="max-width:640px;margin:20px auto;background:#ffffff;border:1px solid #ececf3;border-radius:12px;padding:22px;"><p style="font-size:13px;color:#777;margin:0 0 14px 0;"><strong>To:</strong> ${escapeHtml(participant.email)}</p><div style="font-size:14px;line-height:1.7;color:#333;">${bodyWithBreaks.replace(/\[QR CODE\]/g, qrBlock)}</div></div></body></html>`;
+}
+
+function encodeGmailMessage(to, subject, plainTextBody, htmlBody) {
+  const mime = [
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    'MIME-Version: 1.0',
+    'Content-Type: multipart/alternative; boundary="cafe-samvad-boundary"',
+    '',
+    '--cafe-samvad-boundary',
+    'Content-Type: text/plain; charset="UTF-8"',
+    'Content-Transfer-Encoding: 8bit',
+    '',
+    plainTextBody,
+    '',
+    '--cafe-samvad-boundary',
+    'Content-Type: text/html; charset="UTF-8"',
+    'Content-Transfer-Encoding: 8bit',
+    '',
+    htmlBody,
+    '',
+    '--cafe-samvad-boundary--',
+    '',
+  ].join('\r\n');
+  return btoa(unescape(encodeURIComponent(mime)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '');
+}
+
+async function sendViaGmail() {
+  const sel = document.getElementById('email-select');
+  const subjectEl = document.getElementById('email-subject');
+  const bodyEl = document.getElementById('email-body');
+  const sendBtn = document.getElementById('gmail-send-btn');
+  if (!sel || !subjectEl || !bodyEl || !sendBtn) return;
+  if (!gmailAccessToken) {
+    showToast('Sign in with Google first', 'error');
+    updateGmailStatus('Not connected', true);
+    return;
+  }
+  const targets = sel.value === 'all' ? participants : participants.filter(p => p.id === sel.value);
+  if (targets.length === 0) {
+    showToast('No participants selected', 'error');
+    return;
+  }
+  sendBtn.disabled = true;
+  sendBtn.innerHTML = '<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> Sending...';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  let sentCount = 0;
+  try {
+    for (const participant of targets) {
+      const personalizedBody = buildEmailForParticipant(participant, bodyEl.value);
+      const plainTextBody = personalizedBody.replace('[QR CODE]', `QR Token: ${participant.qr_data}`);
+      const htmlBody = buildGmailHtmlBody(participant, bodyEl.value);
+      const raw = encodeGmailMessage(participant.email, subjectEl.value, plainTextBody, htmlBody);
+      await gapi.client.gmail.users.messages.send({
+        userId: 'me',
+        resource: { raw }
+      });
+      sentCount++;
+    }
+    showToast(`${sentCount} email(s) sent via Gmail!`);
+    updateGmailStatus(`Connected • Last sent: ${sentCount} email(s)`);
+  } catch (e) {
+    console.error('Gmail send failed:', e);
+    showToast(`Sending stopped after ${sentCount} email(s)`, 'error');
+    updateGmailStatus('Send failed. Reconnect and retry.', true);
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.innerHTML = '<i data-lucide="send" class="w-3.5 h-3.5"></i> Send via Gmail';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
 }
 
 function switchTab(name) {
@@ -666,7 +872,13 @@ document.getElementById('email-subject').addEventListener('input', () => {
   if (p) previewEmail(p);
 });
 
+const googleClientIdEl = document.getElementById('google-client-id');
+const googleApiKeyEl = document.getElementById('google-api-key');
+if (googleClientIdEl) googleClientIdEl.addEventListener('input', saveGmailConfig);
+if (googleApiKeyEl) googleApiKeyEl.addEventListener('input', saveGmailConfig);
+
 if (typeof lucide !== 'undefined') lucide.createIcons();
+loadGmailConfig();
 loadFromCache();
   </script>
  </body>
