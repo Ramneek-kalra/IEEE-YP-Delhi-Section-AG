@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Event Check-In Manager BETA - Cafe संवाद</title>
+  <title>Event Check-In Manager - Gmail Integration BETA</title>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <script src="https://apis.google.com/js/api.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { font-family: 'DM Sans', sans-serif; }
@@ -19,20 +20,9 @@
     @keyframes cardIn { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
     .pulse-ring { animation: pulseRing 1.5s ease infinite; }
     @keyframes pulseRing { 0% { transform: scale(0.8); opacity:1; } 100% { transform: scale(1.6); opacity:0; } }
-    .checkbox-custom { accent-color: #6c5ce7; }
-    
     @media (max-width: 640px) {
       body { font-size: 14px; }
-      header { px-4 py-3; }
-      nav { gap: 0; overflow-x: auto; scroll-behavior: smooth; }
-      nav button { flex-shrink: 0; font-size: 12px; padding: 0.5rem 0.75rem; gap: 0.25rem; }
-      nav i { width: 3.5 !important; height: 3.5 !important; }
-      main { padding: 0.75rem; }
       input, textarea, select { font-size: 16px; padding: 0.75rem; }
-      .grid.md\:grid-cols-2 { grid-template-columns: 1fr !important; }
-      .max-w-3xl { max-width: 100% !important; }
-      .max-w-2xl { max-width: 100% !important; }
-      .max-w-lg { max-width: 100% !important; }
     }
   </style>
 </head>
@@ -40,237 +30,185 @@
   <!-- Auth Modal -->
   <div id="auth-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
     <div class="bg-[#161922] rounded-lg p-6 max-w-sm w-full mx-4 border border-[#2a2d3a]">
-      <h2 class="text-lg font-bold mb-4 text-center">Admin Password</h2>
+      <h2 class="text-lg font-bold mb-4 text-center">Admin Access</h2>
       <input id="password-input" type="password" placeholder="Enter admin password" class="w-full bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-3 py-2 mb-4 text-[#e2e4e9] outline-none focus:border-[#6c5ce7]">
-      <button onclick="verifyPassword()" class="w-full bg-[#6c5ce7] hover:bg-[#5a4bd6] text-white py-2 rounded-lg font-semibold">Enter</button>
-      <p class="text-xs text-[#7a7d8e] text-center mt-2">Default: admin123</p>
+      <button onclick="verifyPassword()" class="w-full bg-[#6c5ce7] hover:bg-[#5a4bd6] text-white py-2 rounded-lg font-semibold mb-3">Enter</button>
+      <button onclick="connectGmail()" class="w-full bg-[#4285f4] hover:bg-[#357ae8] text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2">
+        <i data-lucide="mail" class="w-4 h-4"></i> Sign in with Gmail
+      </button>
+      <p class="text-xs text-[#7a7d8e] text-center mt-3">Default: admin123</p>
     </div>
   </div>
 
   <div id="app" class="h-full w-full flex flex-col hidden">
     <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm px-4"></div>
     
-    <header class="bg-[#161922] border-b border-[#2a2d3a] px-4 md:px-6 py-3 md:py-4 flex items-center justify-between shrink-0">
-      <div class="flex items-center gap-3 min-w-0">
-        <div class="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-[#6c5ce7] flex items-center justify-center flex-shrink-0">
+    <header class="bg-[#161922] border-b border-[#2a2d3a] px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-[#6c5ce7] flex items-center justify-center">
           <i data-lucide="qr-code" class="w-4 h-4 md:w-5 md:h-5 text-white"></i>
         </div>
-        <div class="min-w-0">
-          <h1 class="text-base md:text-lg font-bold text-[#e2e4e9] truncate">Cafe संवाद BETA</h1>
-          <p class="text-xs text-[#7a7d8e] truncate">Enhanced Check-In Manager</p>
+        <div>
+          <h1 class="text-base md:text-lg font-bold">Cafe संवाद + Gmail</h1>
+          <p class="text-xs text-[#7a7d8e]">Email Integration BETA</p>
         </div>
       </div>
       <div class="flex gap-2 items-center">
-        <div id="stats-bar" class="flex gap-2 md:gap-4 text-xs flex-shrink-0">
-          <span class="bg-[#1e2030] px-2 md:px-3 py-1 md:py-1.5 rounded-full whitespace-nowrap">
-            <span id="stat-total" class="text-[#6c5ce7] font-bold">0</span>
-            <span class="hidden md:inline">Total</span>
-          </span>
-          <span class="bg-[#1e2030] px-2 md:px-3 py-1 md:py-1.5 rounded-full whitespace-nowrap">
-            <span id="stat-checked" class="text-[#00b894] font-bold">0</span>
-            <span class="hidden md:inline">Checked</span>
-          </span>
-        </div>
-        <button onclick="toggleTheme()" class="p-2 rounded-lg hover:bg-[#1e2030]" title="Toggle theme">
-          <i data-lucide="moon" class="w-4 h-4"></i>
+        <div id="gmail-status" class="text-xs px-2 py-1 rounded-full bg-red-500/20 text-red-400">Disconnected</div>
+        <button onclick="logout()" class="p-2 rounded-lg hover:bg-[#1e2030]">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
         </button>
       </div>
     </header>
 
-    <nav class="bg-[#161922] border-b border-[#2a2d3a] px-2 md:px-6 flex gap-1 md:gap-6 shrink-0 overflow-x-auto scroll-smooth">
-      <button onclick="switchTab('participants')" id="tab-participants" class="tab-active py-2 md:py-3 text-xs md:text-sm font-medium text-[#6c5ce7] border-[#6c5ce7] flex items-center gap-1 md:gap-2 flex-shrink-0 whitespace-nowrap">
-        <i data-lucide="users" class="w-3.5 h-3.5 md:w-4 md:h-4"></i><span class="hidden sm:inline">Participants</span>
+    <nav class="bg-[#161922] border-b border-[#2a2d3a] px-2 md:px-6 flex gap-1 md:gap-6 overflow-x-auto">
+      <button onclick="switchTab('email')" id="tab-email" class="tab-active py-2 md:py-3 text-xs md:text-sm font-medium text-[#6c5ce7] border-[#6c5ce7] flex items-center gap-2">
+        <i data-lucide="mail" class="w-3.5 h-3.5"></i><span class="hidden sm:inline">Email</span>
       </button>
-      <button onclick="switchTab('import')" id="tab-import" class="py-2 md:py-3 text-xs md:text-sm font-medium text-[#7a7d8e] flex items-center gap-1 md:gap-2 flex-shrink-0 whitespace-nowrap hover:text-[#6c5ce7] transition">
-        <i data-lucide="upload" class="w-3.5 h-3.5 md:w-4 md:h-4"></i><span class="hidden sm:inline">Import</span>
+      <button onclick="switchTab('templates')" id="tab-templates" class="py-2 md:py-3 text-xs md:text-sm font-medium text-[#7a7d8e] flex items-center gap-2 hover:text-[#6c5ce7]">
+        <i data-lucide="layout" class="w-3.5 h-3.5"></i><span class="hidden sm:inline">Templates</span>
       </button>
-      <button onclick="switchTab('analytics')" id="tab-analytics" class="py-2 md:py-3 text-xs md:text-sm font-medium text-[#7a7d8e] flex items-center gap-1 md:gap-2 flex-shrink-0 whitespace-nowrap hover:text-[#6c5ce7] transition">
-        <i data-lucide="bar-chart-2" class="w-3.5 h-3.5 md:w-4 md:h-4"></i><span class="hidden sm:inline">Analytics</span>
+      <button onclick="switchTab('scheduling')" id="tab-scheduling" class="py-2 md:py-3 text-xs md:text-sm font-medium text-[#7a7d8e] flex items-center gap-2 hover:text-[#6c5ce7]">
+        <i data-lucide="calendar" class="w-3.5 h-3.5"></i><span class="hidden sm:inline">Schedule</span>
       </button>
-      <button onclick="switchTab('email')" id="tab-email" class="py-2 md:py-3 text-xs md:text-sm font-medium text-[#7a7d8e] flex items-center gap-1 md:gap-2 flex-shrink-0 whitespace-nowrap hover:text-[#6c5ce7] transition">
-        <i data-lucide="mail" class="w-3.5 h-3.5 md:w-4 md:h-4"></i><span class="hidden sm:inline">Email</span>
-      </button>
-      <button onclick="switchTab('scanner')" id="tab-scanner" class="py-2 md:py-3 text-xs md:text-sm font-medium text-[#7a7d8e] flex items-center gap-1 md:gap-2 flex-shrink-0 whitespace-nowrap hover:text-[#6c5ce7] transition">
-        <i data-lucide="scan" class="w-3.5 h-3.5 md:w-4 md:h-4"></i><span class="hidden sm:inline">Scanner</span>
-      </button>
-      <button onclick="logout()" class="py-2 md:py-3 text-xs md:text-sm font-medium text-red-400 flex items-center gap-1 md:gap-2 flex-shrink-0 whitespace-nowrap hover:text-red-300 transition ml-auto">
-        <i data-lucide="log-out" class="w-3.5 h-3.5 md:w-4 md:h-4"></i><span class="hidden sm:inline">Logout</span>
+      <button onclick="switchTab('tracking')" id="tab-tracking" class="py-2 md:py-3 text-xs md:text-sm font-medium text-[#7a7d8e] flex items-center gap-2 hover:text-[#6c5ce7]">
+        <i data-lucide="activity" class="w-3.5 h-3.5"></i><span class="hidden sm:inline">Tracking</span>
       </button>
     </nav>
 
-    <main class="flex-1 overflow-auto">
-      <!-- Participants Panel -->
-      <div id="panel-participants" class="p-3 md:p-6">
-        <div class="bg-[#161922] rounded-lg md:rounded-xl border border-[#2a2d3a] p-3 md:p-5 mb-4">
-          <h2 class="text-xs md:text-sm font-semibold mb-3 flex items-center gap-2">
-            <i data-lucide="search" class="w-3.5 h-3.5 md:w-4 md:h-4 text-[#6c5ce7]"></i>
-            <span>Search & Filter</span>
-          </h2>
-          <div class="flex flex-col gap-2">
-            <input id="search-input" placeholder="Search by name or email..." onkeyup="filterParticipants()" class="w-full bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-3 py-2 text-xs md:text-sm text-[#e2e4e9] outline-none focus:border-[#6c5ce7]">
-            <div class="flex gap-2 flex-wrap">
-              <select id="sort-select" onchange="filterParticipants()" class="flex-1 bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-3 py-2 text-xs md:text-sm text-[#e2e4e9] outline-none focus:border-[#6c5ce7]">
-                <option value="name-asc">Sort: Name (A-Z)</option>
-                <option value="name-desc">Sort: Name (Z-A)</option>
-                <option value="date-new">Sort: Newest First</option>
-                <option value="date-old">Sort: Oldest First</option>
-              </select>
-              <select id="filter-status" onchange="filterParticipants()" class="flex-1 bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-3 py-2 text-xs md:text-sm text-[#e2e4e9] outline-none focus:border-[#6c5ce7]">
-                <option value="all">All Status</option>
-                <option value="checked">Checked In</option>
-                <option value="pending">Pending</option>
-              </select>
-              <button onclick="exportCSV()" class="bg-[#00b894] hover:bg-[#00a381] text-white px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1">
-                <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                <span class="hidden sm:inline">Export</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-[#161922] rounded-lg md:rounded-xl border border-[#2a2d3a] p-3 md:p-5 mb-4">
-          <h2 class="text-xs md:text-sm font-semibold mb-3 flex items-center gap-2">
-            <i data-lucide="user-plus" class="w-3.5 h-3.5 md:w-4 md:h-4 text-[#6c5ce7]"></i>
-            <span>Add Participant</span>
-          </h2>
-          <form id="add-form" class="flex flex-col md:flex-row gap-2">
-            <input id="add-name" placeholder="Full Name" class="flex-1 bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-3 py-2 text-xs md:text-sm text-[#e2e4e9] outline-none focus:border-[#6c5ce7]">
-            <input id="add-email" type="email" placeholder="Email" class="flex-1 bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-3 py-2 text-xs md:text-sm text-[#e2e4e9] outline-none focus:border-[#6c5ce7]">
-            <button type="submit" id="add-btn" class="bg-[#6c5ce7] hover:bg-[#5a4bd6] text-white px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 flex-shrink-0">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i><span class="hidden sm:inline">Add</span>
-            </button>
-          </form>
-        </div>
-
-        <!-- Bulk Actions -->
-        <div id="bulk-actions" class="bg-[#161922] rounded-lg border border-[#2a2d3a] p-3 mb-4 hidden">
-          <div class="flex items-center justify-between flex-wrap gap-2">
-            <span class="text-xs text-[#7a7d8e]"><span id="selected-count">0</span> selected</span>
-            <div class="flex gap-2">
-              <button onclick="bulkCheckIn()" class="bg-[#00b894] hover:bg-[#00a381] text-white px-3 py-1.5 rounded-lg text-xs font-semibold">Check In All</button>
-              <button onclick="bulkDelete()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold">Delete</button>
-              <button onclick="clearSelection()" class="bg-[#7a7d8e] hover:bg-[#888] text-white px-3 py-1.5 rounded-lg text-xs font-semibold">Clear</button>
-            </div>
-          </div>
-        </div>
-
-        <div id="participant-list" class="space-y-2"></div>
-        <div id="empty-state" class="text-center py-8 md:py-16 text-[#7a7d8e]">
-          <i data-lucide="users" class="w-10 h-10 md:w-12 md:h-12 mx-auto mb-3 opacity-40"></i>
-          <p class="text-xs md:text-sm">No participants found.</p>
-        </div>
-      </div>
-
-      <!-- Analytics Panel -->
-      <div id="panel-analytics" class="p-3 md:p-6 hidden">
-        <div class="grid md:grid-cols-3 gap-4 mb-6">
-          <div class="bg-[#161922] rounded-lg border border-[#2a2d3a] p-4">
-            <p class="text-xs text-[#7a7d8e] mb-2">Total Registered</p>
-            <p id="analytics-total" class="text-2xl font-bold text-[#6c5ce7]">0</p>
-          </div>
-          <div class="bg-[#161922] rounded-lg border border-[#2a2d3a] p-4">
-            <p class="text-xs text-[#7a7d8e] mb-2">Checked In</p>
-            <p id="analytics-checked" class="text-2xl font-bold text-[#00b894]">0</p>
-          </div>
-          <div class="bg-[#161922] rounded-lg border border-[#2a2d3a] p-4">
-            <p class="text-xs text-[#7a7d8e] mb-2">Check-In Rate</p>
-            <p id="analytics-rate" class="text-2xl font-bold text-[#ffa502]">0%</p>
-          </div>
-        </div>
-        <div class="bg-[#161922] rounded-lg border border-[#2a2d3a] p-4">
-          <h3 class="text-sm font-semibold mb-4">Recent Activity</h3>
-          <div id="activity-log" class="space-y-2 max-h-96 overflow-auto text-xs">
-            <p class="text-[#7a7d8e] text-center py-4">No recent activity</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Import Panel -->
-      <div id="panel-import" class="p-3 md:p-6 hidden">
-        <div class="max-w-2xl mx-auto">
-          <div class="bg-[#161922] rounded-lg border border-[#2a2d3a] p-4 md:p-8 text-center">
-            <div class="w-12 h-12 md:w-16 md:h-16 rounded-full bg-[#1e2030] flex items-center justify-center mx-auto mb-4">
-              <i data-lucide="file-spreadsheet" class="w-6 h-6 md:w-8 md:h-8 text-[#6c5ce7]"></i>
-            </div>
-            <h2 class="text-base md:text-lg font-bold mb-2">Import from CSV</h2>
-            <p class="text-xs md:text-sm text-[#7a7d8e] mb-6">Upload a CSV file with name and email columns.</p>
-            <label for="csv-input" class="inline-flex items-center gap-2 bg-[#6c5ce7] hover:bg-[#5a4bd6] text-white px-4 md:px-6 py-2 md:py-3 rounded-lg text-xs md:text-sm font-semibold cursor-pointer">
-              <i data-lucide="upload" class="w-3.5 h-3.5"></i> Choose CSV File
-            </label>
-            <input type="file" id="csv-input" accept=".csv" class="hidden">
-            <div id="csv-preview" class="mt-6 hidden">
-              <div class="bg-[#1e2030] rounded-lg p-4 text-left">
-                <p class="text-xs md:text-sm font-semibold mb-2" id="csv-count"></p>
-                <div id="csv-preview-list" class="max-h-40 md:max-h-48 overflow-auto space-y-1 text-xs text-[#7a7d8e] mb-4"></div>
-                <button onclick="confirmImport()" id="import-btn" class="bg-[#00b894] hover:bg-[#00a381] text-white px-4 py-2 rounded-lg text-xs md:text-sm font-semibold w-full">Import All</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Email Panel -->
-      <div id="panel-email" class="p-3 md:p-6 hidden">
-        <div class="max-w-3xl mx-auto">
-          <div class="bg-[#161922] rounded-lg border border-[#2a2d3a] p-4">
-            <h2 class="text-xs md:text-sm font-semibold mb-3">Email Configuration</h2>
+    <main class="flex-1 overflow-auto p-3 md:p-6">
+      <!-- Email Compose Panel -->
+      <div id="panel-email" class="max-w-4xl mx-auto">
+        <div class="grid md:grid-cols-3 gap-4">
+          <!-- Email Composer -->
+          <div class="md:col-span-2 bg-[#161922] rounded-lg border border-[#2a2d3a] p-4">
+            <h2 class="text-sm font-semibold mb-4 flex items-center gap-2">
+              <i data-lucide="edit" class="w-4 h-4 text-[#6c5ce7]"></i> Compose Email
+            </h2>
+            
             <div class="space-y-3">
+              <div>
+                <label class="block text-xs text-[#7a7d8e] mb-1">To (Recipient Email)</label>
+                <input id="email-to" type="email" placeholder="recipient@example.com" class="w-full bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-3 py-2 text-xs text-[#e2e4e9] outline-none focus:border-[#6c5ce7]">
+              </div>
+
+              <div>
+                <label class="block text-xs text-[#7a7d8e] mb-1">From (Your Email)</label>
+                <input id="email-from" type="email" placeholder="your-email@gmail.com" class="w-full bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-3 py-2 text-xs text-[#e2e4e9] outline-none focus:border-[#6c5ce7]">
+              </div>
+
               <div>
                 <label class="block text-xs text-[#7a7d8e] mb-1">Subject</label>
-                <input id="email-subject" value="Your Registration Confirmed! 🎉" class="w-full bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-3 py-2 text-xs md:text-sm text-[#e2e4e9] outline-none focus:border-[#6c5ce7]">
+                <input id="email-subject" value="Your Registration Confirmed! 🎉" class="w-full bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-3 py-2 text-xs text-[#e2e4e9] outline-none focus:border-[#6c5ce7]">
               </div>
+
               <div>
-                <label class="block text-xs text-[#7a7d8e] mb-1">Body</label>
-                <textarea id="email-body" rows="8" class="w-full bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-3 py-2 text-xs md:text-sm text-[#e2e4e9] outline-none focus:border-[#6c5ce7] resize-none">Hi {name},
-
-Your registration for {event} on {date} is confirmed!
-
-Best regards,
-{organizer}</textarea>
+                <label class="block text-xs text-[#7a7d8e] mb-1">Template</label>
+                <select id="template-select" onchange="loadTemplate()" class="w-full bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-3 py-2 text-xs text-[#e2e4e9] outline-none focus:border-[#6c5ce7]">
+                  <option value="basic">Basic Confirmation</option>
+                  <option value="professional">Professional</option>
+                  <option value="festive">Festive</option>
+                  <option value="custom">Custom HTML</option>
+                </select>
               </div>
+
+              <div>
+                <label class="block text-xs text-[#7a7d8e] mb-1">Email Body (HTML)</label>
+                <textarea id="email-body" rows="10" class="w-full bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-3 py-2 text-xs text-[#e2e4e9] outline-none focus:border-[#6c5ce7] resize-none font-mono"></textarea>
+              </div>
+
               <div class="flex gap-2">
-                <button onclick="generateEmailsWithQR()" class="flex-1 bg-[#6c5ce7] hover:bg-[#5a4bd6] text-white px-3 py-2 rounded-lg text-xs font-semibold">Download HTML</button>
-                <button onclick="generateEmails()" class="flex-1 bg-[#00b894] hover:bg-[#00a381] text-white px-3 py-2 rounded-lg text-xs font-semibold">Mailto Links</button>
+                <button onclick="sendEmailNow()" class="flex-1 bg-[#6c5ce7] hover:bg-[#5a4bd6] text-white px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2">
+                  <i data-lucide="send" class="w-3.5 h-3.5"></i> Send Now
+                </button>
+                <button onclick="scheduleEmail()" class="flex-1 bg-[#00b894] hover:bg-[#00a381] text-white px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2">
+                  <i data-lucide="calendar" class="w-3.5 h-3.5"></i> Schedule
+                </button>
               </div>
+            </div>
+          </div>
+
+          <!-- Preview -->
+          <div class="bg-[#161922] rounded-lg border border-[#2a2d3a] p-4">
+            <h2 class="text-sm font-semibold mb-4">Preview</h2>
+            <div id="email-preview" class="bg-white rounded-lg p-4 text-[#333] text-xs overflow-auto" style="height: 400px;">
+              <p class="text-[#999] italic text-center py-8">Email preview will appear here...</p>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Scanner Panel -->
-      <div id="panel-scanner" class="p-3 md:p-6 hidden">
-        <div class="max-w-lg mx-auto">
-          <div id="manual-view" class="bg-[#161922] rounded-lg border border-[#2a2d3a] p-4 md:p-8">
-            <div class="text-center mb-6">
-              <div class="w-12 h-12 md:w-16 md:h-16 rounded-full bg-[#1e2030] flex items-center justify-center mx-auto mb-4 relative">
-                <i data-lucide="scan" class="w-6 h-6 md:w-8 md:h-8 text-[#6c5ce7]"></i>
-                <div class="absolute inset-0 rounded-full border-2 border-[#6c5ce7] pulse-ring"></div>
-              </div>
-              <h2 class="text-base md:text-lg font-bold mb-2">QR Code Verifier</h2>
-              <p class="text-xs md:text-sm text-[#7a7d8e]">Use camera or paste QR code data.</p>
-            </div>
-            <div class="space-y-3">
-              <button onclick="startCamera()" id="camera-btn" class="w-full bg-[#6c5ce7] hover:bg-[#5a4bd6] text-white px-4 py-2 rounded-lg text-xs md:text-sm font-semibold flex items-center justify-center gap-2">
-                <i data-lucide="camera" class="w-3.5 h-3.5"></i> Start Camera
-              </button>
-              <input id="scan-input" placeholder="Paste QR code data..." class="w-full bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-3 py-2 text-xs md:text-sm text-[#e2e4e9] outline-none focus:border-[#6c5ce7]">
-              <button onclick="verifyQR()" class="w-full bg-[#6c5ce7] hover:bg-[#5a4bd6] text-white px-4 py-2 rounded-lg text-xs md:text-sm font-semibold">Verify</button>
-            </div>
-            <div id="scan-result" class="mt-4 hidden"></div>
+      <!-- Templates Panel -->
+      <div id="panel-templates" class="max-w-4xl mx-auto hidden">
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="bg-[#161922] rounded-lg border border-[#2a2d3a] p-4">
+            <h3 class="font-semibold mb-2 text-sm">Basic Confirmation</h3>
+            <button onclick="useTemplate('basic')" class="w-full bg-[#6c5ce7] hover:bg-[#5a4bd6] text-white px-3 py-2 rounded-lg text-xs font-semibold">Use Template</button>
           </div>
-          <div id="camera-view" class="hidden bg-[#161922] rounded-lg border border-[#2a2d3a] overflow-hidden">
-            <video id="camera-stream" class="w-full" style="aspect-ratio: 4/3;" playsinline autoplay muted></video>
-            <div class="p-3 flex gap-2 justify-center">
-              <button onclick="stopCamera()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2">
-                <i data-lucide="x" class="w-3.5 h-3.5"></i> Close
-              </button>
-            </div>
+          <div class="bg-[#161922] rounded-lg border border-[#2a2d3a] p-4">
+            <h3 class="font-semibold mb-2 text-sm">Professional</h3>
+            <button onclick="useTemplate('professional')" class="w-full bg-[#6c5ce7] hover:bg-[#5a4bd6] text-white px-3 py-2 rounded-lg text-xs font-semibold">Use Template</button>
           </div>
-          <div class="mt-4 bg-[#161922] rounded-lg border border-[#2a2d3a] p-4">
-            <h3 class="text-xs md:text-sm font-semibold mb-3">Recent Scans</h3>
-            <div id="verify-log" class="space-y-1 max-h-48 overflow-auto text-xs">
-              <p class="text-[#7a7d8e] text-center py-3">No scans yet.</p>
+          <div class="bg-[#161922] rounded-lg border border-[#2a2d3a] p-4">
+            <h3 class="font-semibold mb-2 text-sm">Festive Design</h3>
+            <button onclick="useTemplate('festive')" class="w-full bg-[#6c5ce7] hover:bg-[#5a4bd6] text-white px-3 py-2 rounded-lg text-xs font-semibold">Use Template</button>
+          </div>
+          <div class="bg-[#161922] rounded-lg border border-[#2a2d3a] p-4">
+            <h3 class="font-semibold mb-2 text-sm">Custom HTML</h3>
+            <button onclick="useTemplate('custom')" class="w-full bg-[#6c5ce7] hover:bg-[#5a4bd6] text-white px-3 py-2 rounded-lg text-xs font-semibold">Edit Custom</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scheduling Panel -->
+      <div id="panel-scheduling" class="max-w-2xl mx-auto hidden">
+        <div class="bg-[#161922] rounded-lg border border-[#2a2d3a] p-4">
+          <h2 class="text-sm font-semibold mb-4">Schedule Email Delivery</h2>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs text-[#7a7d8e] mb-1">Schedule Date & Time</label>
+              <input id="schedule-datetime" type="datetime-local" class="w-full bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-3 py-2 text-xs text-[#e2e4e9] outline-none focus:border-[#6c5ce7]">
             </div>
+            <div>
+              <label class="block text-xs text-[#7a7d8e] mb-1">Repeat</label>
+              <select id="schedule-repeat" class="w-full bg-[#1e2030] border border-[#2a2d3a] rounded-lg px-3 py-2 text-xs text-[#e2e4e9] outline-none focus:border-[#6c5ce7]">
+                <option value="once">Send Once</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+            <button onclick="confirmSchedule()" class="w-full bg-[#00b894] hover:bg-[#00a381] text-white px-4 py-2 rounded-lg text-xs font-semibold">Schedule Email</button>
+          </div>
+          
+          <div id="scheduled-list" class="mt-6">
+            <h3 class="text-xs font-semibold mb-2 text-[#7a7d8e]">Scheduled Emails</h3>
+            <div id="scheduled-items" class="space-y-2"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tracking Panel -->
+      <div id="panel-tracking" class="max-w-4xl mx-auto hidden">
+        <div class="grid md:grid-cols-3 gap-4 mb-4">
+          <div class="bg-[#161922] rounded-lg border border-[#2a2d3a] p-4">
+            <p class="text-xs text-[#7a7d8e] mb-1">Total Sent</p>
+            <p id="stat-sent" class="text-2xl font-bold text-[#6c5ce7]">0</p>
+          </div>
+          <div class="bg-[#161922] rounded-lg border border-[#2a2d3a] p-4">
+            <p class="text-xs text-[#7a7d8e] mb-1">Delivered</p>
+            <p id="stat-delivered" class="text-2xl font-bold text-[#00b894]">0</p>
+          </div>
+          <div class="bg-[#161922] rounded-lg border border-[#2a2d3a] p-4">
+            <p class="text-xs text-[#7a7d8e] mb-1">Failed</p>
+            <p id="stat-failed" class="text-2xl font-bold text-red-400">0</p>
+          </div>
+        </div>
+
+        <div class="bg-[#161922] rounded-lg border border-[#2a2d3a] p-4">
+          <h2 class="text-sm font-semibold mb-3">Email Activity Log</h2>
+          <div id="email-log" class="space-y-2 max-h-96 overflow-auto">
+            <p class="text-xs text-[#7a7d8e] text-center py-4">No email activity yet</p>
           </div>
         </div>
       </div>
@@ -278,26 +216,304 @@ Best regards,
   </div>
 
   <script>
+    // Configuration
     const ADMIN_PASSWORD = 'admin123';
-    const PUBLIC_DOMAIN = window.location.origin;
-    const QR_STORAGE_PATH = '/IEEE-YP-Delhi-Section-AG/code/qr/';
-    const STORAGE_KEY = 'cafe_samvad_participants_beta';
-    const HISTORY_KEY = 'cafe_samvad_history_beta';
-    const ACTIVITY_KEY = 'cafe_samvad_activity_beta';
+    const STORAGE_KEY = 'email_campaigns';
+    const TRACKING_KEY = 'email_tracking';
     
-    let participants = [];
-    let csvParsed = [];
-    let verifyHistory = [];
-    let activityLog = [];
-    let selectedParticipants = new Set();
-    let filteredParticipants = [];
+    let gmailConnected = false;
+    let campaigns = [];
+    let emailTracking = [];
+    let scheduledEmails = [];
 
+    // ==================== Gmail API Integration ====================
+    function connectGmail() {
+      const script = document.createElement('script');
+      script.src = 'https://apis.google.com/js/api.js';
+      script.onload = () => initGmailClient();
+      document.head.appendChild(script);
+    }
+
+    function initGmailClient() {
+      gapi.load('client:auth2', {
+        onload: () => {
+          gapi.client.init({
+            apiKey: 'YOUR_API_KEY', // Replace with your API key
+            clientId: 'YOUR_CLIENT_ID.apps.googleusercontent.com', // Replace with your Client ID
+            discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest"],
+            scope: 'https://www.googleapis.com/auth/gmail.send'
+          }).then(() => {
+            const auth = gapi.auth2.getAuthInstance();
+            auth.isSignedIn.listen(updateGmailStatus);
+            if (auth.isSignedIn.get()) {
+              gmailConnected = true;
+              updateGmailStatus(true);
+            } else {
+              auth.signIn();
+            }
+          });
+        }
+      });
+    }
+
+    function updateGmailStatus(isSignedIn) {
+      const status = document.getElementById('gmail-status');
+      if (isSignedIn) {
+        gmailConnected = true;
+        status.className = 'text-xs px-2 py-1 rounded-full bg-[#00b894]/20 text-[#00b894]';
+        status.textContent = 'Connected';
+      } else {
+        gmailConnected = false;
+        status.className = 'text-xs px-2 py-1 rounded-full bg-red-500/20 text-red-400';
+        status.textContent = 'Disconnected';
+      }
+    }
+
+    // ==================== Email Templates ====================
+    const emailTemplates = {
+      basic: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5;">
+        <div style="background: white; border-radius: 8px; padding: 30px;">
+          <h1 style="color: #333; margin-bottom: 20px;">Registration Confirmed! 🎉</h1>
+          <p style="color: #666; line-height: 1.6; margin-bottom: 15px;">
+            Hi {name},
+          </p>
+          <p style="color: #666; line-height: 1.6; margin-bottom: 15px;">
+            Thank you for registering for <strong>{event}</strong> on <strong>{date}</strong>!
+          </p>
+          <p style="color: #666; line-height: 1.6; margin-bottom: 15px;">
+            Your confirmation details:
+          </p>
+          <div style="background: #f0f0f0; padding: 15px; border-left: 4px solid #6c5ce7; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>Event:</strong> {event}</p>
+            <p style="margin: 5px 0;"><strong>Date:</strong> {date}</p>
+            <p style="margin: 5px 0;"><strong>Email:</strong> {email}</p>
+          </div>
+          <p style="color: #666; line-height: 1.6; margin-bottom: 15px;">
+            We look forward to seeing you there!
+          </p>
+          <p style="color: #666; margin-top: 30px;">
+            Best regards,<br>
+            {organizer}
+          </p>
+        </div>
+      </div>`,
+      
+      professional: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; color: white; border-radius: 8px 8px 0 0;">
+          <h1 style="margin: 0; font-size: 28px;">Registration Confirmed</h1>
+        </div>
+        <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <p style="color: #333; margin-bottom: 20px;">Dear {name},</p>
+          <p style="color: #666; line-height: 1.6; margin-bottom: 15px;">
+            We are pleased to confirm your registration for the upcoming event.
+          </p>
+          <table style="width: 100%; margin: 20px 0; border-collapse: collapse;">
+            <tr style="border-bottom: 1px solid #eee;">
+              <td style="padding: 10px; color: #667eea; font-weight: bold;">Event Name:</td>
+              <td style="padding: 10px; color: #333;">{event}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #eee;">
+              <td style="padding: 10px; color: #667eea; font-weight: bold;">Date & Time:</td>
+              <td style="padding: 10px; color: #333;">{date}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; color: #667eea; font-weight: bold;">Status:</td>
+              <td style="padding: 10px; color: #00b894; font-weight: bold;">✓ Confirmed</td>
+            </tr>
+          </table>
+          <p style="color: #666; line-height: 1.6; margin-bottom: 15px;">
+            If you have any questions, please don't hesitate to contact us.
+          </p>
+          <p style="color: #666; margin-top: 30px;">
+            Regards,<br>
+            <strong>{organizer}</strong>
+          </p>
+        </div>
+      </div>`,
+      
+      festive: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);">
+        <div style="background: white; border-radius: 12px; padding: 40px; text-align: center;">
+          <h1 style="color: #19547b; font-size: 32px; margin: 0 0 10px 0;">🎉 You're In! 🎉</h1>
+          <p style="color: #ffa502; font-size: 18px; margin: 10px 0;">Your Spot is Confirmed</p>
+          <hr style="border: none; border-top: 2px solid #ffa502; margin: 20px 0;">
+          <p style="color: #333; font-size: 16px; margin-bottom: 20px;">Hey {name}!</p>
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="color: #666; margin: 0 0 10px 0;"><strong>🎯 Event:</strong> {event}</p>
+            <p style="color: #666; margin: 0 0 10px 0;"><strong>📅 Date:</strong> {date}</p>
+            <p style="color: #00b894; margin: 0; font-size: 18px; font-weight: bold;">✓ Registration Confirmed!</p>
+          </div>
+          <p style="color: #666; line-height: 1.6; margin: 20px 0;">
+            Get ready for an amazing experience! See you there!
+          </p>
+          <p style="color: #999; font-size: 14px; margin-top: 30px;">
+            {organizer}
+          </p>
+        </div>
+      </div>`
+    };
+
+    function loadTemplate() {
+      const templateId = document.getElementById('template-select').value;
+      const template = emailTemplates[templateId] || '';
+      document.getElementById('email-body').value = template;
+      updatePreview();
+    }
+
+    function useTemplate(templateId) {
+      document.getElementById('template-select').value = templateId;
+      loadTemplate();
+      switchTab('email');
+    }
+
+    function updatePreview() {
+      const body = document.getElementById('email-body').value
+        .replace('{name}', 'John Doe')
+        .replace('{event}', 'Cafe संवाद')
+        .replace('{date}', '29th March 2026')
+        .replace('{email}', 'john@example.com')
+        .replace('{organizer}', 'IEEE YP Delhi');
+      
+      document.getElementById('email-preview').innerHTML = body;
+    }
+
+    // ==================== Email Functions ====================
+    async function sendEmailNow() {
+      if (!gmailConnected) {
+        showToast('Gmail not connected', 'error');
+        return;
+      }
+
+      const to = document.getElementById('email-to').value;
+      const from = document.getElementById('email-from').value;
+      const subject = document.getElementById('email-subject').value;
+      const body = document.getElementById('email-body').value;
+
+      if (!to || !from || !subject || !body) {
+        showToast('Please fill all fields', 'error');
+        return;
+      }
+
+      try {
+        const rawMessage = `From: ${from}\nTo: ${to}\nSubject: ${subject}\nContent-Type: text/html; charset="UTF-8"\n\n${body}`;
+        const encodedMessage = btoa(rawMessage).replace(/\+/g, '-').replace(/\//g, '_');
+
+        const response = await gapi.client.gmail.users.messages.send({
+          'userId': 'me',
+          'resource': {
+            'raw': encodedMessage
+          }
+        });
+
+        addTracking('sent', to, subject, 'Success');
+        showToast('Email sent successfully!', 'success');
+      } catch (err) {
+        addTracking('failed', to, subject, err.message);
+        showToast('Failed to send email', 'error');
+      }
+    }
+
+    function scheduleEmail() {
+      const datetime = document.getElementById('schedule-datetime').value;
+      if (!datetime) {
+        showToast('Please select date and time', 'error');
+        return;
+      }
+
+      const email = {
+        to: document.getElementById('email-to').value,
+        subject: document.getElementById('email-subject').value,
+        body: document.getElementById('email-body').value,
+        scheduledTime: new Date(datetime).toISOString(),
+        repeat: document.getElementById('schedule-repeat').value
+      };
+
+      scheduledEmails.push(email);
+      saveScheduledEmails();
+      showToast('Email scheduled!', 'success');
+      loadScheduledEmails();
+    }
+
+    function confirmSchedule() {
+      scheduleEmail();
+      document.getElementById('schedule-datetime').value = '';
+      document.getElementById('schedule-repeat').value = 'once';
+    }
+
+    function loadScheduledEmails() {
+      const list = document.getElementById('scheduled-items');
+      list.innerHTML = scheduledEmails.map((e, i) => `
+        <div class="bg-[#1e2030] rounded-lg p-2 text-xs flex justify-between items-center">
+          <span>${e.to} - ${new Date(e.scheduledTime).toLocaleString()}</span>
+          <button onclick="removeScheduledEmail(${i})" class="text-red-400 hover:text-red-300">✕</button>
+        </div>
+      `).join('');
+    }
+
+    function removeScheduledEmail(index) {
+      scheduledEmails.splice(index, 1);
+      saveScheduledEmails();
+      loadScheduledEmails();
+    }
+
+    // ==================== Tracking ====================
+    function addTracking(status, recipient, subject, details) {
+      emailTracking.push({
+        timestamp: new Date().toLocaleString(),
+        status,
+        recipient,
+        subject,
+        details
+      });
+      saveTracking();
+      updateTrackingStats();
+      updateTrackingLog();
+    }
+
+    function updateTrackingStats() {
+      const sent = emailTracking.filter(e => e.status === 'sent').length;
+      const delivered = emailTracking.filter(e => e.status === 'delivered').length;
+      const failed = emailTracking.filter(e => e.status === 'failed').length;
+
+      document.getElementById('stat-sent').textContent = sent;
+      document.getElementById('stat-delivered').textContent = delivered;
+      document.getElementById('stat-failed').textContent = failed;
+    }
+
+    function updateTrackingLog() {
+      const log = document.getElementById('email-log');
+      log.innerHTML = emailTracking.slice(-20).reverse().map(e => `
+        <div class="text-xs p-2 bg-[#1e2030] rounded flex justify-between">
+          <span>${e.timestamp}</span>
+          <span class="${e.status === 'sent' ? 'text-[#6c5ce7]' : e.status === 'delivered' ? 'text-[#00b894]' : 'text-red-400'}">${e.status.toUpperCase()}</span>
+          <span class="text-[#7a7d8e]">${e.recipient}</span>
+        </div>
+      `).join('') || '<p class="text-xs text-[#7a7d8e] text-center py-4">No email activity yet</p>';
+    }
+
+    // ==================== Storage ====================
+    function saveScheduledEmails() {
+      localStorage.setItem('scheduled_emails', JSON.stringify(scheduledEmails));
+    }
+
+    function saveTracking() {
+      localStorage.setItem(TRACKING_KEY, JSON.stringify(emailTracking));
+    }
+
+    function loadData() {
+      scheduledEmails = JSON.parse(localStorage.getItem('scheduled_emails') || '[]');
+      emailTracking = JSON.parse(localStorage.getItem(TRACKING_KEY) || '[]');
+      loadScheduledEmails();
+      updateTrackingStats();
+      updateTrackingLog();
+    }
+
+    // ==================== UI Functions ====================
     function verifyPassword() {
       const input = document.getElementById('password-input');
       if (input.value === ADMIN_PASSWORD) {
         document.getElementById('auth-modal').classList.add('hidden');
         document.getElementById('app').classList.remove('hidden');
-        loadFromCache();
+        loadData();
         if (typeof lucide !== 'undefined') lucide.createIcons();
       } else {
         showToast('Invalid password', 'error');
@@ -306,16 +522,30 @@ Best regards,
     }
 
     function logout() {
-      if (confirm('Are you sure you want to logout?')) {
+      if (confirm('Logout?')) {
         document.getElementById('app').classList.add('hidden');
         document.getElementById('auth-modal').classList.remove('hidden');
         document.getElementById('password-input').value = '';
       }
     }
 
+    function switchTab(name) {
+      ['email', 'templates', 'scheduling', 'tracking'].forEach(t => {
+        const panel = document.getElementById('panel-' + t);
+        const btn = document.getElementById('tab-' + t);
+        if (panel) panel.classList.toggle('hidden', t !== name);
+        if (btn) {
+          btn.classList.toggle('tab-active', t === name);
+          btn.classList.toggle('text-[#6c5ce7]', t === name);
+          btn.classList.toggle('border-[#6c5ce7]', t === name);
+          btn.classList.toggle('text-[#7a7d8e]', t !== name);
+        }
+      });
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
     function showToast(msg, type = 'success') {
       const c = document.getElementById('toast-container');
-      if (!c) return;
       const t = document.createElement('div');
       const bg = type === 'success' ? '#00b894' : type === 'error' ? '#e74c3c' : '#6c5ce7';
       t.className = 'toast px-4 py-3 rounded-lg text-sm font-medium text-white shadow-lg';
@@ -325,480 +555,14 @@ Best regards,
       setTimeout(() => t.remove(), 3000);
     }
 
-    function switchTab(name) {
-      ['participants','import','analytics','email','scanner'].forEach(t => {
-        const panel = document.getElementById('panel-' + t);
-        if (panel) panel.classList.toggle('hidden', t !== name);
-        const btn = document.getElementById('tab-' + t);
-        if (btn) {
-          btn.classList.toggle('tab-active', t === name);
-          btn.classList.toggle('text-[#6c5ce7]', t === name);
-          btn.classList.toggle('border-[#6c5ce7]', t === name);
-          btn.classList.toggle('text-[#7a7d8e]', t !== name);
-        }
-      });
-      if (name === 'analytics') updateAnalytics();
-      if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
-
-    function generateQRDataURL(text) {
-      try {
-        const qr = qrcode(0, 'M');
-        qr.addData(text);
-        qr.make();
-        return qr.createDataURL(6, 4);
-      } catch (e) {
-        return '';
-      }
-    }
-
-    function generateQRToken(name, email) {
-      const raw = `EVTCHK|${name}|${email}|${Date.now()}`;
-      let hash = 0;
-      for (let i = 0; i < raw.length; i++) {
-        hash = ((hash << 5) - hash) + raw.charCodeAt(i);
-        hash |= 0;
-      }
-      return `EVTCHK-${Math.abs(hash).toString(36).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
-    }
-
-    function escapeHtml(text) {
-      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-      return text.replace(/[&<>"']/g, m => map[m]);
-    }
-
-    function loadFromCache() {
-      try {
-        participants = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-        verifyHistory = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-        activityLog = JSON.parse(localStorage.getItem(ACTIVITY_KEY) || '[]');
-        filteredParticipants = [...participants];
-        renderParticipants();
-      } catch (e) {
-        console.error('Failed to load cache:', e);
-      }
-    }
-
-    function saveToCache() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(participants));
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(verifyHistory));
-      localStorage.setItem(ACTIVITY_KEY, JSON.stringify(activityLog));
-    }
-
-    function addActivity(action, details) {
-      activityLog.unshift({
-        timestamp: new Date().toLocaleString(),
-        action,
-        details
-      });
-      if (activityLog.length > 100) activityLog.pop();
-      saveToCache();
-    }
-
-    async function addParticipant(name, email) {
-      if (participants.length >= 999) {
-        showToast('Maximum participants reached!', 'error');
-        return;
-      }
-      if (participants.some(p => p.email.toLowerCase() === email.toLowerCase())) {
-        showToast('Email already registered', 'error');
-        return;
-      }
-
-      const qr_data = generateQRToken(name, email);
-      participants.push({
-        id: Date.now().toString() + Math.random(),
-        name, email, qr_data,
-        checked_in: false,
-        registered_at: new Date().toISOString()
-      });
-
-      addActivity('ADD_PARTICIPANT', `Added ${name}`);
-      saveToCache();
-      filterParticipants();
-      showToast(`${name} added!`);
-    }
-
-    function filterParticipants() {
-      const search = document.getElementById('search-input').value.toLowerCase();
-      const sort = document.getElementById('sort-select').value;
-      const status = document.getElementById('filter-status').value;
-
-      filteredParticipants = participants.filter(p => {
-        const matchSearch = p.name.toLowerCase().includes(search) || p.email.toLowerCase().includes(search);
-        const matchStatus = status === 'all' || (status === 'checked' ? p.checked_in : !p.checked_in);
-        return matchSearch && matchStatus;
-      });
-
-      // Sort
-      if (sort === 'name-asc') filteredParticipants.sort((a, b) => a.name.localeCompare(b.name));
-      else if (sort === 'name-desc') filteredParticipants.sort((a, b) => b.name.localeCompare(a.name));
-      else if (sort === 'date-new') filteredParticipants.sort((a, b) => new Date(b.registered_at) - new Date(a.registered_at));
-      else if (sort === 'date-old') filteredParticipants.sort((a, b) => new Date(a.registered_at) - new Date(b.registered_at));
-
-      renderParticipants();
-    }
-
-    function renderParticipants() {
-      const list = document.getElementById('participant-list');
-      const empty = document.getElementById('empty-state');
-      
-      list.innerHTML = '';
-      empty.classList.toggle('hidden', filteredParticipants.length > 0);
-
-      filteredParticipants.forEach(p => {
-        const div = document.createElement('div');
-        div.className = 'card-enter bg-[#161922] border border-[#2a2d3a] rounded-lg p-3 flex items-center gap-3';
-        div.dataset.id = p.id;
-        
-        const qrImg = generateQRDataURL(p.qr_data);
-        div.innerHTML = `
-          <input type="checkbox" class="checkbox-custom" data-id="${p.id}" onchange="toggleSelection(this)">
-          <img src="${qrImg}" alt="QR" class="w-10 h-10 rounded-lg border border-[#2a2d3a] flex-shrink-0">
-          <div class="flex-1 min-w-0">
-            <p class="font-semibold text-xs md:text-sm truncate">${escapeHtml(p.name)}</p>
-            <p class="text-xs text-[#7a7d8e] truncate">${escapeHtml(p.email)}</p>
-            <p class="text-[10px] text-[#555] mt-0.5">${new Date(p.registered_at).toLocaleDateString()}</p>
-          </div>
-          <span class="text-xs px-2 py-1 rounded-full ${p.checked_in ? 'bg-[#00b894]/20 text-[#00b894]' : 'bg-[#2a2d3a] text-[#7a7d8e]'}">${p.checked_in ? 'Checked' : 'Pending'}</span>
-          <button onclick="toggleCheckIn('${p.id}')" class="p-1.5 rounded-lg hover:bg-[#1e2030]">
-            <i data-lucide="${p.checked_in ? 'user-check' : 'log-in'}" class="w-3.5 h-3.5 ${p.checked_in ? 'text-[#00b894]' : 'text-[#7a7d8e]'}"></i>
-          </button>
-          <button onclick="deleteParticipant('${p.id}')" class="p-1.5 rounded-lg hover:bg-red-500/10">
-            <i data-lucide="trash-2" class="w-3.5 h-3.5 text-red-400"></i>
-          </button>
-        `;
-        list.appendChild(div);
-      });
-
-      updateStats();
-      if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
-
-    function toggleSelection(checkbox) {
-      const id = checkbox.dataset.id;
-      if (checkbox.checked) {
-        selectedParticipants.add(id);
-      } else {
-        selectedParticipants.delete(id);
-      }
-      updateBulkActions();
-    }
-
-    function clearSelection() {
-      selectedParticipants.clear();
-      document.querySelectorAll('.checkbox-custom').forEach(cb => cb.checked = false);
-      updateBulkActions();
-    }
-
-    function updateBulkActions() {
-      const bulkActions = document.getElementById('bulk-actions');
-      const selectedCount = document.getElementById('selected-count');
-      
-      if (selectedParticipants.size > 0) {
-        bulkActions.classList.remove('hidden');
-        selectedCount.textContent = selectedParticipants.size;
-      } else {
-        bulkActions.classList.add('hidden');
-      }
-    }
-
-    function bulkCheckIn() {
-      selectedParticipants.forEach(id => {
-        const p = participants.find(x => x.id === id);
-        if (p) p.checked_in = true;
-      });
-      addActivity('BULK_CHECK_IN', `Checked in ${selectedParticipants.size} participants`);
-      saveToCache();
-      clearSelection();
-      filterParticipants();
-      showToast(`${selectedParticipants.size} participants checked in!`);
-    }
-
-    function bulkDelete() {
-      if (confirm(`Delete ${selectedParticipants.size} participants?`)) {
-        participants = participants.filter(p => !selectedParticipants.has(p.id));
-        addActivity('BULK_DELETE', `Deleted ${selectedParticipants.size} participants`);
-        saveToCache();
-        clearSelection();
-        filterParticipants();
-        showToast('Participants deleted!');
-      }
-    }
-
-    function toggleCheckIn(id) {
-      const p = participants.find(x => x.id === id);
-      if (!p) return;
-      p.checked_in = !p.checked_in;
-      addActivity(p.checked_in ? 'CHECK_IN' : 'UNDO_CHECK_IN', p.name);
-      saveToCache();
-      filterParticipants();
-    }
-
-    function deleteParticipant(id) {
-      const p = participants.find(x => x.id === id);
-      if (!p) return;
-      if (confirm(`Delete ${p.name}?`)) {
-        participants = participants.filter(x => x.id !== id);
-        addActivity('DELETE_PARTICIPANT', p.name);
-        saveToCache();
-        filterParticipants();
-        showToast(`${p.name} removed!`);
-      }
-    }
-
-    function updateStats() {
-      const total = participants.length;
-      const checked = participants.filter(p => p.checked_in).length;
-      document.getElementById('stat-total').textContent = total;
-      document.getElementById('stat-checked').textContent = checked;
-    }
-
-    function updateAnalytics() {
-      const total = participants.length;
-      const checked = participants.filter(p => p.checked_in).length;
-      const rate = total === 0 ? 0 : Math.round((checked / total) * 100);
-
-      document.getElementById('analytics-total').textContent = total;
-      document.getElementById('analytics-checked').textContent = checked;
-      document.getElementById('analytics-rate').textContent = rate + '%';
-
-      const logDiv = document.getElementById('activity-log');
-      logDiv.innerHTML = activityLog.slice(0, 20).map(e => 
-        `<div class="text-[10px] p-2 bg-[#1e2030] rounded flex justify-between"><span>${e.timestamp}</span><span class="text-[#6c5ce7]">${e.action}: ${escapeHtml(e.details)}</span></div>`
-      ).join('') || '<p class="text-[#7a7d8e] text-center py-4">No recent activity</p>';
-    }
-
-    function exportCSV() {
-      const headers = ['Name', 'Email', 'Status', 'Registered Date'];
-      const rows = filteredParticipants.map(p => [
-        p.name,
-        p.email,
-        p.checked_in ? 'Checked In' : 'Pending',
-        new Date(p.registered_at).toLocaleString()
-      ]);
-
-      let csv = headers.join(',') + '\n';
-      rows.forEach(row => {
-        csv += row.map(cell => `"${cell}"`).join(',') + '\n';
-      });
-
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `participants-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('CSV exported!');
-    }
-
-    document.getElementById('csv-input').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(ev) {
-        const text = ev.target.result;
-        const lines = text.split(/\r?\n/).filter(l => l.trim());
-        if (lines.length < 2) { showToast('Invalid CSV', 'error'); return; }
-        
-        const header = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/['"]/g, ''));
-        const nameIdx = header.findIndex(h => h === 'name' || h === 'full name');
-        const emailIdx = header.findIndex(h => h === 'email' || h === 'e-mail');
-        
-        if (nameIdx === -1 || emailIdx === -1) { showToast('CSV must have name and email', 'error'); return; }
-        
-        csvParsed = [];
-        for (let i = 1; i < lines.length; i++) {
-          const cols = lines[i].split(',').map(c => c.trim().replace(/^["']|["']$/g, ''));
-          if (cols[nameIdx] && cols[emailIdx]) csvParsed.push({ name: cols[nameIdx], email: cols[emailIdx] });
-        }
-
-        const previewDiv = document.getElementById('csv-preview');
-        previewDiv.classList.remove('hidden');
-        document.getElementById('csv-count').textContent = `${csvParsed.length} records found`;
-        document.getElementById('csv-preview-list').innerHTML = csvParsed.slice(0, 10).map(p => 
-          `<div>${escapeHtml(p.name)} — ${escapeHtml(p.email)}</div>`
-        ).join('');
-      };
-      reader.readAsText(file);
-    });
-
-    async function confirmImport() {
-      const btn = document.getElementById('import-btn');
-      btn.disabled = true;
-      btn.textContent = 'Importing...';
-      let added = 0;
-
-      for (const p of csvParsed) {
-        if (participants.length + added >= 999) break;
-        if (participants.some(x => x.email.toLowerCase() === p.email.toLowerCase())) continue;
-        
-        const qr_data = generateQRToken(p.name, p.email);
-        participants.push({
-          id: Date.now().toString() + Math.random(),
-          name: p.name,
-          email: p.email,
-          qr_data,
-          checked_in: false,
-          registered_at: new Date().toISOString()
-        });
-        added++;
-      }
-
-      addActivity('IMPORT_CSV', `Imported ${added} participants`);
-      saveToCache();
-      filterParticipants();
-      btn.disabled = false;
-      btn.textContent = 'Import All';
-      showToast(`${added} participants imported!`);
-    }
-
-    function generateEmailsWithQR() {
-      if (filteredParticipants.length === 0) { showToast('No participants', 'error'); return; }
-      
-      let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Arial;margin:0;padding:0;background:#f5f5f5;}.email-container{margin:20px;padding:20px;background:white;border-radius:8px;page-break-after:always;}</style></head><body>`;
-      
-      filteredParticipants.forEach((p, idx) => {
-        const qrImg = generateQRDataURL(p.qr_data);
-        html += `<div class="email-container"><h2>${escapeHtml(p.name)}</h2><p>${escapeHtml(p.email)}</p><img src="${qrImg}" style="width:160px;height:160px;"></div>`;
-        if (idx < filteredParticipants.length - 1) html += '<hr style="page-break-after:always; border:none;margin:0;">';
-      });
-      
-      html += '</body></html>';
-      const blob = new Blob([html], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `emails-${Date.now()}.html`;
-      a.click();
-      showToast('Emails downloaded!');
-    }
-
-    function generateEmails() {
-      if (filteredParticipants.length === 0) { showToast('No participants', 'error'); return; }
-      
-      filteredParticipants.forEach(p => {
-        const subject = document.getElementById('email-subject').value;
-        const body = document.getElementById('email-body').value
-          .replace('{name}', p.name)
-          .replace('{event}', 'Event')
-          .replace('{date}', 'Date')
-          .replace('{organizer}', 'Organizer');
-        
-        const mailto = `mailto:${encodeURIComponent(p.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        window.open(mailto);
-      });
-      showToast(`${filteredParticipants.length} mailto links generated!`);
-    }
-
-    // Camera functions
-    let cameraStream = null;
-    let animationId = null;
-
-    async function startCamera() {
-      try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        const video = document.getElementById('camera-stream');
-        video.srcObject = cameraStream;
-        document.getElementById('manual-view').classList.add('hidden');
-        document.getElementById('camera-view').classList.remove('hidden');
-        setTimeout(() => scanQRCode(), 500);
-      } catch (err) {
-        showToast('Camera access denied', 'error');
-      }
-    }
-
-    function stopCamera() {
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
-        cameraStream = null;
-      }
-      if (animationId) cancelAnimationFrame(animationId);
-      document.getElementById('camera-view').classList.add('hidden');
-      document.getElementById('manual-view').classList.remove('hidden');
-    }
-
-    function scanQRCode() {
-      const video = document.getElementById('camera-stream');
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      const scan = () => {
-        if (!cameraStream) return;
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        if (canvas.width === 0) { animationId = requestAnimationFrame(scan); return; }
-        
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        
-        try {
-          if (typeof jsQR !== 'undefined') {
-            const code = jsQR(imageData.data, imageData.width, imageData.height);
-            if (code && code.data) {
-              stopCamera();
-              document.getElementById('scan-input').value = code.data;
-              verifyQR();
-              return;
-            }
-          }
-        } catch (e) {}
-        
-        animationId = requestAnimationFrame(scan);
-      };
-      scan();
-    }
-
-    async function verifyQR() {
-      const input = document.getElementById('scan-input');
-      const data = input.value.trim();
-      if (!data) { showToast('Enter QR code', 'error'); return; }
-      
-      const match = participants.find(p => p.qr_data === data);
-      const resultDiv = document.getElementById('scan-result');
-      
-      if (match) {
-        resultDiv.innerHTML = `<div class="bg-[#00b894]/10 border border-[#00b894] rounded-lg p-3"><p class="text-[#00b894] font-bold">✓ ${escapeHtml(match.name)}</p><p class="text-xs text-[#7a7d8e]">${escapeHtml(match.email)}</p><button onclick="toggleCheckIn('${match.id}')" class="mt-2 bg-[#00b894] text-white px-2 py-1 rounded text-xs">Check In</button></div>`;
-      } else {
-        resultDiv.innerHTML = `<div class="bg-red-500/10 border border-red-500 rounded-lg p-3"><p class="text-red-400 font-bold">✗ Not Found</p></div>`;
-      }
-      resultDiv.classList.remove('hidden');
-      
-      verifyHistory.unshift({ time: new Date().toLocaleTimeString(), data, found: !!match });
-      saveToCache();
-      updateVerifyLog();
-      input.value = '';
-    }
-
-    function updateVerifyLog() {
-      const logDiv = document.getElementById('verify-log');
-      logDiv.innerHTML = verifyHistory.slice(0, 10).map(e => 
-        `<div class="text-xs p-2 bg-[#1e2030] rounded flex justify-between"><span>${e.time}</span><span class="${e.found ? 'text-[#00b894]' : 'text-red-400'}">${e.found ? 'Valid' : 'Invalid'}</span></div>`
-      ).join('') || '<p class="text-[#7a7d8e] text-center py-2">No scans</p>';
-    }
-
-    document.getElementById('add-form').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const name = document.getElementById('add-name').value.trim();
-      const email = document.getElementById('add-email').value.trim();
-      if (name && email) {
-        addParticipant(name, email);
-        document.getElementById('add-name').value = '';
-        document.getElementById('add-email').value = '';
-      }
-    });
-
-    function toggleTheme() {
-      document.body.classList.toggle('light-mode');
-    }
-
-    // Allow Enter key for password
+    // Initialize
+    document.getElementById('email-body').addEventListener('input', updatePreview);
     document.getElementById('password-input').addEventListener('keypress', function(e) {
       if (e.key === 'Enter') verifyPassword();
     });
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
+    loadData();
   </script>
 </body>
 </html>
