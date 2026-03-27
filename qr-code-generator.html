@@ -3,68 +3,428 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Generator</title>
-    <script>
-        function uploadCSV() {
-            const input = document.getElementById('csvInput');
-            const reader = new FileReader();
-            reader.onload = function (event) {
-                const text = event.target.result;
-                const lines = text.split('\n');
-                const jsonData = lines.map(line => {
-                    const [name, data] = line.split(',');
-                    return { name, data };
-                });
-                generateQRCode(jsonData);
-            };
-            reader.readAsText(input.files[0]);
+    <title>QR Code Generator for Participants</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        function generateQRCode(data) {
-            const qrContainer = document.getElementById('qrCodes');
-            qrContainer.innerHTML = '';
-            data.forEach(item => {
-                const qrCode = document.createElement('div');
-                qrCode.innerHTML = '<h3>' + item.name + '</h3>'; // Display the name
-                const qr = document.createElement('img');
-                qr.src = 'https://api.qrserver.com/v1/create-qr-code/?data=' + encodeURIComponent(item.data);
-                qrCode.appendChild(qr);
-                qrContainer.appendChild(qrCode);
-            });
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
-        function batchDownload() {
-            const qrCodes = document.querySelectorAll('#qrCodes img');
-            let zip = new JSZip();
-            let count = 0;
-
-            qrCodes.forEach((qr, index) => {
-                fetch(qr.src)
-                    .then(res => res.blob())
-                    .then(blob => {
-                        zip.file('QRCode' + index + '.png', blob);
-                        count++;
-                        if (count === qrCodes.length) {
-                            zip.generateAsync({ type: 'blob' }).then(content => {
-                                const a = document.createElement('a');
-                                const url = URL.createObjectURL(content);
-                                a.href = url;
-                                a.download = 'QRCodes.zip';
-                                a.click();
-                                URL.revokeObjectURL(url);
-                            });
-                        }
-                    });
-            });
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 1200px;
+            width: 100%;
+            padding: 40px;
         }
-    </script>
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            background: #f0f2ff;
+            border-color: #764ba2;
+        }
+
+        .upload-section input[type="file"] {
+            display: none;
+        }
+
+        .upload-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+
+        .upload-button:hover {
+            background: #764ba2;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .settings {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .qr-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #eee;
+        }
+
+        .qr-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .qr-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .message.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #2e7d32;
+            display: block;
+        }
+
+        .message.error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 20px; }
+            .settings { grid-template-columns: 1fr; }
+            .btn { width: 100%; }
+        }
+    </style>
 </head>
 <body>
-    <h1>QR Code Generator</h1>
-    <input type="file" id="csvInput" accept="text/csv">
-    <button onclick="uploadCSV()">Upload CSV</button>
-    <div id="qrCodes"></div>
-    <button onclick="batchDownload()">Download All QR Codes</button>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 QR Code Generator</h1>
+            <p>Generate QR codes for participant lists</p>
+        </div>
+
+        <div id="message" class="message"></div>
+
+        <div class="upload-section" id="uploadSection">
+            <div style="font-size: 48px; margin-bottom: 15px;">📄</div>
+            <h3>Upload CSV File</h3>
+            <p>Drag and drop or click to select</p>
+            <input type="file" id="csvFile" accept=".csv">
+            <button class="upload-button" onclick="document.getElementById('csvFile').click()">Choose File</button>
+            <div id="fileInfo" style="margin-top: 15px; color: #667eea;"></div>
+        </div>
+
+        <div class="settings">
+            <div>
+                <label>QR Code Size (pixels):</label>
+                <input type="number" id="qrSize" value="200" min="100" max="500" step="50">
+            </div>
+            <div>
+                <label>Error Correction Level:</label>
+                <select id="errorCorrection">
+                    <option value="L">Low (7%)</option>
+                    <option value="M" selected>Medium (15%)</option>
+                    <option value="Q">Quartile (25%)</option>
+                    <option value="H">High (30%)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="generateBtn" onclick="generateQRCodes()" disabled>Generate QR Codes</button>
+            <button class="btn btn-secondary" id="downloadAllBtn" onclick="downloadAllQRCodes()" disabled>⬇️ Download All as ZIP</button>
+            <button class="btn btn-secondary" onclick="clearData()">Clear</button>
+        </div>
+
+        <div id="qrContainer" class="qr-container">
+            <div style="text-align: center; padding: 60px 20px; color: #999; grid-column: 1/-1;">
+                <div style="font-size: 64px; margin-bottom: 20px;">🎨</div>
+                <p>Upload a CSV file to get started</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let participants = [];
+        let qrCodes = [];
+
+        const uploadSection = document.getElementById('uploadSection');
+        const csvFile = document.getElementById('csvFile');
+        const fileInfo = document.getElementById('fileInfo');
+        const messageDiv = document.getElementById('message');
+        const qrContainer = document.getElementById('qrContainer');
+        const generateBtn = document.getElementById('generateBtn');
+        const downloadAllBtn = document.getElementById('downloadAllBtn');
+
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.style.background = '#f0f2ff';
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.style.background = '#f8f9fa';
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.style.background = '#f8f9fa';
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                csvFile.files = files;
+                handleFileUpload();
+            }
+        });
+
+        csvFile.addEventListener('change', handleFileUpload);
+
+        function handleFileUpload() {
+            const file = csvFile.files[0];
+            if (!file) return;
+
+            if (!file.name.endsWith('.csv')) {
+                showMessage('Please upload a valid CSV file', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const csv = e.target.result;
+                    parseCSV(csv);
+                    fileInfo.textContent = `✓ Loaded: ${file.name} (${participants.length} participants)`;
+                    showMessage(`Successfully loaded ${participants.length} participants`, 'success');
+                    generateBtn.disabled = false;
+                } catch (error) {
+                    showMessage('Error parsing CSV: ' + error.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function parseCSV(csv) {
+            participants = [];
+            const lines = csv.trim().split('\n');
+            let startIdx = 0;
+            if (lines[0].toLowerCase().includes('name') || lines[0].toLowerCase().includes('email')) {
+                startIdx = 1;
+            }
+
+            for (let i = startIdx; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                const parts = line.split(',').map(p => p.trim());
+                if (parts.length >= 2) {
+                    participants.push({ name: parts[0], email: parts[1] });
+                }
+            }
+
+            if (participants.length === 0) throw new Error('No valid participants found');
+        }
+
+        function generateQRCodes() {
+            if (participants.length === 0) {
+                showMessage('Please upload a CSV file first', 'error');
+                return;
+            }
+
+            qrContainer.innerHTML = '';
+            qrCodes = [];
+            const qrSize = parseInt(document.getElementById('qrSize').value);
+            const errorCorrection = document.getElementById('errorCorrection').value;
+
+            participants.forEach((participant, index) => {
+                const qrData = JSON.stringify({ name: participant.name, email: participant.email });
+                const card = document.createElement('div');
+                card.className = 'qr-card';
+
+                const qrDiv = document.createElement('div');
+                qrDiv.id = `qr-${index}`;
+                qrDiv.style.background = 'white';
+                qrDiv.style.padding = '15px';
+                qrDiv.style.borderRadius = '5px';
+                qrDiv.style.marginBottom = '15px';
+                qrDiv.style.display = 'inline-block';
+
+                const infoDiv = document.createElement('div');
+                infoDiv.innerHTML = `<strong>${participant.name}</strong><p style="color: #666; font-size: 13px; margin: 5px 0;">${participant.email}</p>`;
+
+                const downloadBtn = document.createElement('button');
+                downloadBtn.className = 'btn btn-primary';
+                downloadBtn.textContent = '⬇️ Download';
+                downloadBtn.style.padding = '8px 12px';
+                downloadBtn.style.fontSize = '12px';
+                downloadBtn.onclick = () => downloadSingleQR(index, participant.name);
+
+                card.appendChild(qrDiv);
+                card.appendChild(infoDiv);
+                card.appendChild(downloadBtn);
+                qrContainer.appendChild(card);
+
+                new QRCode(qrDiv, {
+                    text: qrData,
+                    width: qrSize,
+                    height: qrSize,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode[`CorrectLevel${errorCorrection}`]
+                });
+
+                qrCodes.push({ index, name: participant.name, email: participant.email, qrDiv });
+            });
+
+            downloadAllBtn.disabled = false;
+            showMessage(`Generated ${participants.length} QR codes`, 'success');
+        }
+
+        function downloadSingleQR(index, name) {
+            const qrElement = document.getElementById(`qr-${index}`);
+            const canvas = qrElement.querySelector('canvas');
+            if (canvas) {
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL('image/png');
+                link.download = `QR_${name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`;
+                link.click();
+            }
+        }
+
+        function downloadAllQRCodes() {
+            if (qrCodes.length === 0) {
+                showMessage('Please generate QR codes first', 'error');
+                return;
+            }
+
+            const zip = new JSZip();
+            let downloadCount = 0;
+
+            qrCodes.forEach((qr) => {
+                const canvas = qr.qrDiv.querySelector('canvas');
+                if (canvas) {
+                    canvas.toBlob((blob) => {
+                        const fileName = `QR_${qr.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`;
+                        zip.file(fileName, blob);
+                        downloadCount++;
+
+                        if (downloadCount === qrCodes.length) {
+                            zip.generateAsync({ type: 'blob' }).then((content) => {
+                                const link = document.createElement('a');
+                                link.href = URL.createObjectURL(content);
+                                link.download = 'QR_Codes_' + new Date().getTime() + '.zip';
+                                link.click();
+                                showMessage('All QR codes downloaded as ZIP', 'success');
+                            });
+                        }
+                    }, 'image/png');
+                }
+            });
+        }
+
+        function clearData() {
+            participants = [];
+            qrCodes = [];
+            csvFile.value = '';
+            fileInfo.textContent = '';
+            generateBtn.disabled = true;
+            downloadAllBtn.disabled = true;
+            qrContainer.innerHTML = '<div style="text-align: center; padding: 60px 20px; color: #999; grid-column: 1/-1;"><div style="font-size: 64px; margin-bottom: 20px;">🎨</div><p>Upload a CSV file to get started</p></div>';
+        }
+
+        function showMessage(text, type) {
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            setTimeout(() => { messageDiv.className = 'message'; }, 5000);
+        }
+    </script>
 </body>
 </html>
