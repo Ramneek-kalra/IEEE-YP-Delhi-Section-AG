@@ -1,0 +1,30 @@
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <title>QR Code Generator</title>  
+    <style>  
+        /* Add your CSS styles here */  
+    </style>  
+    <script>  
+        function generateQRCode() {  
+            var qrCodeContainer = document.getElementById('qrCode');  
+            var qrCodeText = document.getElementById('qrCodeText').value;  
+            qrCodeContainer.innerHTML = '';  
+            var qrCode = new QRCode(qrCodeContainer, {  
+                text: qrCodeText,  
+                width: 128,  
+                height: 128,  
+            });  
+        }  
+        // Other JavaScript code here  
+    </script>  
+</head>  
+<body>  
+    <h1>QR Code Generator</h1>  
+    <input type="text" id="qrCodeText" placeholder="Enter text or URL">  
+    <button onclick="generateQRCode()">Generate QR Code</button>  
+    <div id="qrCode"></div>  
+</body>  
+</html>
